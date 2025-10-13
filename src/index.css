@@ -9,22 +9,22 @@ All colors MUST be HSL.
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 240 10% 15%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 15%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 15%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 221 83% 53%;
+    --primary: 221 100% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 24 95% 61%;
+    --secondary: 24 100% 50%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
     --accent: 262 83% 58%;
     --accent-foreground: 0 0% 100%;
@@ -32,24 +32,11 @@ All colors MUST be HSL.
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 221 83% 53%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 100% 50%;
 
     --radius: 1rem;
-    
-    /* Custom gradient stops */
-    --gradient-from: 24 95% 61%;
-    --gradient-via: 221 83% 53%;
-    --gradient-to: 262 83% 58%;
-    
-    /* Glass effect */
-    --glass-bg: 0 0% 100%;
-    --glass-border: 0 0% 100%;
-    
-    /* Glow effect */
-    --glow-primary: 221 83% 53%;
-    --glow-secondary: 24 95% 61%;
 
     --sidebar-background: 0 0% 98%;
 
@@ -118,30 +105,28 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-gradient-to-br from-secondary via-primary to-accent text-foreground font-sans antialiased min-h-screen;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  html {
+    scroll-behavior: smooth;
   }
 }
 
 @layer utilities {
-  .glass {
-    @apply bg-white/10 backdrop-blur-md border border-white/20;
-  }
-  
-  .glass-card {
-    @apply bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl shadow-xl;
-  }
-  
-  .glow-primary {
-    box-shadow: 0 0 30px hsl(var(--glow-primary) / 0.3), 
-                0 0 60px hsl(var(--glow-primary) / 0.2);
-  }
-  
-  .glow-secondary {
-    box-shadow: 0 0 30px hsl(var(--glow-secondary) / 0.3),
-                0 0 60px hsl(var(--glow-secondary) / 0.2);
-  }
-  
   .text-gradient {
-    @apply bg-gradient-to-r from-secondary via-primary to-accent bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent;
+  }
+  
+  .gradient-border {
+    @apply relative before:absolute before:inset-0 before:rounded-2xl before:p-[2px] before:bg-gradient-to-r before:from-secondary before:to-primary before:-z-10;
+  }
+  
+  .btn-gradient {
+    @apply bg-gradient-to-r from-secondary to-primary text-white hover:shadow-lg hover:scale-105 transition-all duration-300;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
   }
 }

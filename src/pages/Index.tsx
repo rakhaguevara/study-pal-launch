@@ -1,12 +1,14 @@
-import { useEffect, useRef } from "react";
-import { HeroSection } from "@/components/HeroSection";
-import { PricingSection } from "@/components/PricingSection";
-import { LoginSection } from "@/components/LoginSection";
+import { useEffect } from "react";
+import { Navbar } from "@/components/Navbar";
+import { Hero } from "@/components/Hero";
+import { Features } from "@/components/Features";
+import { Plans } from "@/components/Plans";
+import { Testimonials } from "@/components/Testimonials";
+import { Footer } from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
-  const loginRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,22 +30,14 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const scrollToLogin = () => {
-    loginRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handlePlanSelection = (plan: "free" | "pro") => {
-    console.log(`Selected plan: ${plan}`);
-    scrollToLogin();
-  };
-
   return (
-    <div className="relative">
-      <HeroSection onGetStarted={scrollToLogin} />
-      <PricingSection onSelectPlan={handlePlanSelection} />
-      <div ref={loginRef}>
-        <LoginSection />
-      </div>
+    <div>
+      <Navbar />
+      <Hero />
+      <Features />
+      <Plans />
+      <Testimonials />
+      <Footer />
     </div>
   );
 };
