@@ -36,6 +36,7 @@ const Login = () => {
           title: "Account created!",
           description: "You've been automatically signed in.",
         });
+        navigate("/dashboard");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -48,6 +49,7 @@ const Login = () => {
           title: "Welcome back!",
           description: "You've successfully signed in.",
         });
+        navigate("/dashboard");
       }
     } catch (error: any) {
       toast({
@@ -65,7 +67,7 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/success`,
+          redirectTo: `${window.location.origin}/dashboard`,
         },
       });
 

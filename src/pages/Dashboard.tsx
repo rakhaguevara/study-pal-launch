@@ -1,0 +1,69 @@
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
+import DashboardNavbar from "@/components/DashboardNavbar";
+import DashboardSidebar from "@/components/DashboardSidebar";
+import DashboardCards from "@/components/DashboardCards";
+import RecommendedTips from "@/components/RecommendedTips";
+
+const Dashboard = () => {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const getUserName = () => {
+    if (!user) return "User";
+    return user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <DashboardNavbar user={user} />
+      <div className="flex">
+        <DashboardSidebar />
+        <main className="flex-1 p-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-foreground mb-2">
+                Welcome back, {getUserName()} 👋
+              </h1>
+              <p className="text-muted-foreground">
+                Here's a summary of your study performance.
+              </p>
+            </div>
+
+            <DashboardCards />
+            <RecommendedTips />
+          </motion.div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
