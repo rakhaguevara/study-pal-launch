@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { auth, googleProvider } from "@/lib/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -22,35 +23,19 @@ const Login = () => {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/success`,
-          },
-        });
-
-        if (error) throw error;
-
+        await createUserWithEmailAndPassword(auth, email, password);
         toast({
           title: "Account created!",
           description: "You've been automatically signed in.",
         });
-        navigate("/dashboard");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) throw error;
-
+        await signInWithEmailAndPassword(auth, email, password);
         toast({
           title: "Welcome back!",
           description: "You've successfully signed in.",
         });
-        navigate("/dashboard");
       }
+      navigate("/dashboard");
     } catch (error: any) {
       toast({
         title: "Error",
@@ -64,14 +49,12 @@ const Login = () => {
 
   const handleGoogleAuth = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-        },
+      await signInWithPopup(auth, googleProvider);
+      toast({
+        title: "Welcome!",
+        description: "You've successfully signed in with Google.",
       });
-
-      if (error) throw error;
+      navigate("/dashboard");
     } catch (error: any) {
       toast({
         title: "Error",
