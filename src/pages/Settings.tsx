@@ -147,46 +147,104 @@ const Settings = () => {
   };
 
   const handleSaveChanges = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "No user is currently logged in.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setIsLoading(true);
+      let updatedSuccessfully = false;
 
-      // Update displayName if changed
-      if (formData.displayName !== user.displayName) {
-        await updateProfile(user, {
-          displayName: formData.displayName,
-        });
+      // Update displayName if changed and not empty
+      if (formData.displayName && formData.displayName !== user.displayName) {
+        try {
+          await updateProfile(user, {
+            displayName: formData.displayName,
+          });
 
-        await setDoc(
-          doc(db, "users", user.uid),
-          { displayName: formData.displayName },
-          { merge: true }
-        );
+          // Force reload user to get updated profile
+          await user.reload();
+
+          await setDoc(
+            doc(db, "users", user.uid),
+            { 
+              displayName: formData.displayName,
+              updatedAt: new Date().toISOString()
+            },
+            { merge: true }
+          );
+
+          updatedSuccessfully = true;
+        } catch (error) {
+          console.error("Error updating display name:", error);
+          throw error;
+        }
       }
 
       // Update password if provided and not a Google user
       if (formData.password && !isGoogleUser) {
-        await updatePassword(user, formData.password);
-        setFormData({ ...formData, password: "" });
-        toast({
-          title: "Password Updated",
-          description: "Your password has been changed successfully.",
-        });
+        if (formData.password.length < 6) {
+          toast({
+            title: "Weak Password",
+            description: "Password should be at least 6 characters.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        try {
+          await updatePassword(user, formData.password);
+          setFormData({ ...formData, password: "" });
+          
+          toast({
+            title: "Password Updated",
+            description: "Your password has been changed successfully.",
+          });
+          
+          updatedSuccessfully = true;
+        } catch (error) {
+          console.error("Error updating password:", error);
+          throw error;
+        }
       }
 
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been updated successfully.",
-      });
+      if (updatedSuccessfully) {
+        toast({
+          title: "Profile Updated",
+          description: "Your profile has been updated successfully.",
+        });
+
+        // Refresh the form with updated data
+        setFormData({
+          displayName: user.displayName || "",
+          email: user.email || "",
+          password: "",
+        });
+      } else if (!formData.password && formData.displayName === user.displayName) {
+        toast({
+          title: "No Changes",
+          description: "No changes were made to your profile.",
+        });
+      }
     } catch (error: any) {
       console.error("Error saving changes:", error);
       
       let errorMessage = "Failed to save changes. Please try again.";
+      
       if (error.code === "auth/requires-recent-login") {
-        errorMessage = "Please log out and log in again before changing your password.";
+        errorMessage = "For security reasons, please log out and log in again before changing your password.";
       } else if (error.code === "auth/weak-password") {
         errorMessage = "Password should be at least 6 characters.";
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "Invalid email address.";
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       toast({
@@ -303,7 +361,7 @@ const Settings = () => {
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder={isGoogleUser ? "Not available for Google accounts" : "Enter new password"}
+                    placeholder={isGoogleUser ? "Not available for Google accounts" : "Enter new password (min. 6 characters)"}
                     className="focus:ring-2 focus:ring-indigo-500/50"
                     disabled={isGoogleUser || isLoading}
                   />
