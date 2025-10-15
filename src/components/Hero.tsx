@@ -21,8 +21,7 @@ export const Hero = () => {
               <span className="text-gradient">Learning Style</span> with StudyPal
             </h1>
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              AI-powered learning insights to help you study smarter, not harder. 
-              Understand your unique learning habits and get personalized recommendations.
+              Rakha Dzikra Guevara
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
