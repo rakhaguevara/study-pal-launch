@@ -62,12 +62,12 @@ const DashboardSidebar = () => {
       {/* Header with Logo */}
       <SidebarHeader className="bg-sidebar border-b border-sidebar-border">
         <div className={cn(
-          "flex items-center gap-3 px-4 py-4 transition-all duration-300",
+          "flex items-center gap-3 px-4 py-5 transition-all duration-300",
           isCollapsed ? "justify-center" : "justify-start"
         )}>
           <BookOpen className={cn(
             "text-primary transition-all duration-300",
-            isCollapsed ? "h-6 w-6" : "h-8 w-8"
+            isCollapsed ? "h-7 w-7" : "h-10 w-10"
           )} />
           {!isCollapsed && (
             <span className="text-2xl font-bold text-gradient animate-in fade-in-50 duration-200">
@@ -95,20 +95,20 @@ const DashboardSidebar = () => {
                       to={item.path}
                       end={item.path === "/dashboard"}
                       className={cn(
-                        "group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300",
+                        "group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ease-out",
                         isActive(item.path)
                           ? "bg-gradient-to-r from-secondary to-primary text-white shadow-lg"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent"
+                          : "text-sidebar-foreground hover:bg-white/8"
                       )}
                     >
                       <item.icon className={cn(
-                        "h-5 w-5 flex-shrink-0 transition-all duration-300",
+                        "h-5 w-5 flex-shrink-0 transition-all duration-200",
                         !isActive(item.path) && "group-hover:text-cyan-400 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
                       )} />
                       {!isCollapsed && (
                         <span className={cn(
-                          "font-medium animate-in fade-in-50 duration-200 transition-all duration-300",
-                          !isActive(item.path) && "group-hover:translate-x-1"
+                          "font-medium animate-in fade-in-50 duration-200 transition-all duration-200",
+                          !isActive(item.path) && "group-hover:translate-x-0.5"
                         )}>
                           {item.name}
                         </span>
@@ -122,12 +122,12 @@ const DashboardSidebar = () => {
         </SidebarGroup>
       </SidebarContent>
       
-      {/* Toggle Button - Middle Left */}
+      {/* Toggle Button - Middle Upper */}
       <button
         onClick={toggleSidebar}
         className={cn(
-          "absolute top-1/2 -translate-y-1/2 -right-4 z-50",
-          "w-8 h-8 rounded-full",
+          "absolute top-[35%] -translate-y-1/2 -right-3.5 z-50",
+          "w-7 h-7 rounded-full",
           "bg-sidebar border-2 border-sidebar-border",
           "flex items-center justify-center",
           "text-sidebar-foreground",
@@ -139,7 +139,7 @@ const DashboardSidebar = () => {
       >
         <ChevronLeft 
           className={cn(
-            "h-4 w-4 transition-transform duration-300",
+            "h-3.5 w-3.5 transition-transform duration-300",
             isCollapsed && "rotate-180"
           )} 
         />
@@ -158,23 +158,23 @@ const DashboardSidebar = () => {
                 <NavLink
                   to={item.path}
                   className={cn(
-                    "group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300",
+                    "group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ease-out",
                     isActive(item.path)
                       ? "bg-gradient-to-r from-secondary to-primary text-white shadow-lg"
-                      : "text-sidebar-foreground hover:text-cyan-400"
+                      : "text-sidebar-foreground hover:bg-white/8"
                   )}
                 >
                   <item.icon 
                     className={cn(
-                      "h-5 w-5 flex-shrink-0 transition-all duration-300",
-                      !isActive(item.path) && "group-hover:translate-x-1 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
+                      "h-5 w-5 flex-shrink-0 transition-all duration-200",
+                      !isActive(item.path) && "group-hover:text-cyan-400 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
                     )} 
                   />
                   {!isCollapsed && (
                     <span 
                       className={cn(
-                        "font-medium transition-all duration-300 animate-in fade-in-50",
-                        !isActive(item.path) && "group-hover:translate-x-1"
+                        "font-medium transition-all duration-200 animate-in fade-in-50",
+                        !isActive(item.path) && "group-hover:translate-x-0.5"
                       )}
                     >
                       {item.name}

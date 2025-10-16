@@ -9,6 +9,7 @@ import DashboardCards from "@/components/DashboardCards";
 import RecommendedTips from "@/components/RecommendedTips";
 import Settings from "./Settings";
 import ComingSoon from "./ComingSoon";
+import AIAssistant from "./AIAssistant";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 
 const Dashboard = () => {
@@ -73,11 +74,11 @@ const Dashboard = () => {
                 }
               />
               <Route path="settings" element={<Settings />} />
+              <Route path="ai" element={<AIAssistant />} />
               <Route path="tasks" element={<ComingSoon title="Tasks Manager" description="Organize and track your study tasks efficiently." />} />
               <Route path="analytics" element={<ComingSoon title="Analytics Dashboard" description="Detailed insights into your learning patterns and progress." />} />
               <Route path="notes" element={<ComingSoon title="Smart Notes" description="AI-powered note-taking and organization system." />} />
               <Route path="focus" element={<ComingSoon title="Focus Mode" description="Distraction-free environment to boost your productivity." />} />
-              <Route path="ai" element={<ComingSoon title="AI Assistant" description="Your personal AI tutor for personalized learning support." />} />
               <Route path="profile" element={<ComingSoon title="User Profile" description="View and manage your learning profile and achievements." />} />
               <Route path="faq" element={<ComingSoon title="FAQ & Help" description="Find answers to common questions about StudyPal." />} />
             </Routes>

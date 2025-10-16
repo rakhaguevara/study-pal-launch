@@ -167,9 +167,7 @@ const Settings = () => {
             displayName: formData.displayName,
           });
 
-          // Force reload user to get updated profile
-          await user.reload();
-
+          // Update Firestore first
           await setDoc(
             doc(db, "users", user.uid),
             { 
@@ -178,6 +176,19 @@ const Settings = () => {
             },
             { merge: true }
           );
+
+          // Force reload user to get updated profile
+          await user.reload();
+          
+          // Force immediate state update
+          const updatedUser = auth.currentUser;
+          if (updatedUser) {
+            setFormData({
+              displayName: updatedUser.displayName || "",
+              email: updatedUser.email || "",
+              password: "",
+            });
+          }
 
           updatedSuccessfully = true;
         } catch (error) {
@@ -200,6 +211,11 @@ const Settings = () => {
 
         try {
           await updatePassword(user, formData.password);
+          
+          // Force reload to ensure changes are applied
+          await user.reload();
+          
+          // Clear password field immediately
           setFormData({ ...formData, password: "" });
           
           toast({
