@@ -1,15 +1,15 @@
-import { 
-  Home, 
-  CheckSquare, 
-  BarChart3, 
-  FileText, 
-  Focus, 
-  Bot, 
-  User, 
-  Settings, 
+import {
+  Home,
+  CheckSquare,
+  BarChart3,
+  FileText,
+  Focus,
+  Bot,
+  User,
+  Settings,
   HelpCircle,
   ChevronLeft,
-  BookOpen
+  BookOpen,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -48,27 +48,34 @@ const DashboardSidebar = () => {
   const isCollapsed = state === "collapsed";
 
   const isActive = (path: string) => {
-    if (path === "/dashboard") {
-      return location.pathname === "/dashboard";
-    }
+    if (path === "/dashboard") return location.pathname === "/dashboard";
     return location.pathname.startsWith(path);
   };
 
   return (
-    <Sidebar 
+    <Sidebar
       collapsible="icon"
-      className="border-r border-sidebar-border relative"
+      className={cn(
+        // ✅ Sidebar selalu FIXED
+        "fixed left-0 top-0 h-screen z-50 w-[--sidebar-width] bg-sidebar text-sidebar-foreground border-r border-sidebar-border",
+        "flex flex-col transition-all duration-300 ease-linear",
+        "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
+      )}
     >
-      {/* Header with Logo */}
+      {/* Header */}
       <SidebarHeader className="bg-sidebar border-b border-sidebar-border">
-        <div className={cn(
-          "flex items-center gap-3 px-4 py-5 transition-all duration-300",
-          isCollapsed ? "justify-center" : "justify-start"
-        )}>
-          <BookOpen className={cn(
-            "text-primary transition-all duration-300",
-            isCollapsed ? "h-7 w-7" : "h-10 w-10"
-          )} />
+        <div
+          className={cn(
+            "flex items-center gap-3 px-4 py-5 transition-all duration-300",
+            isCollapsed ? "justify-center" : "justify-start"
+          )}
+        >
+          <BookOpen
+            className={cn(
+              "text-primary transition-all duration-300",
+              isCollapsed ? "h-7 w-7" : "h-10 w-10"
+            )}
+          />
           {!isCollapsed && (
             <span className="text-2xl font-bold text-gradient animate-in fade-in-50 duration-200">
               StudyPal
@@ -76,11 +83,11 @@ const DashboardSidebar = () => {
           )}
         </div>
       </SidebarHeader>
-      
+
       <SidebarSeparator className="bg-sidebar-border" />
-      
-      <SidebarContent className="bg-sidebar">
-        {/* Main Navigation */}
+
+      {/* Main Menu */}
+      <SidebarContent className="bg-sidebar flex-1 overflow-y-auto">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -101,15 +108,20 @@ const DashboardSidebar = () => {
                           : "text-sidebar-foreground hover:bg-white/8"
                       )}
                     >
-                      <item.icon className={cn(
-                        "h-5 w-5 flex-shrink-0 transition-all duration-200",
-                        !isActive(item.path) && "group-hover:text-cyan-400 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
-                      )} />
+                      <item.icon
+                        className={cn(
+                          "h-5 w-5 flex-shrink-0 transition-all duration-200",
+                          !isActive(item.path) &&
+                            "group-hover:text-cyan-400 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
+                        )}
+                      />
                       {!isCollapsed && (
-                        <span className={cn(
-                          "font-medium animate-in fade-in-50 duration-200 transition-all duration-200",
-                          !isActive(item.path) && "group-hover:translate-x-0.5"
-                        )}>
+                        <span
+                          className={cn(
+                            "font-medium animate-in fade-in-50 duration-200 transition-all duration-200",
+                            !isActive(item.path) && "group-hover:translate-x-0.5"
+                          )}
+                        >
                           {item.name}
                         </span>
                       )}
@@ -121,31 +133,27 @@ const DashboardSidebar = () => {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      
-      {/* Toggle Button - Middle Upper */}
+
+      {/* Collapse Button */}
       <button
         onClick={toggleSidebar}
         className={cn(
-          "absolute top-[35%] -translate-y-1/2 -right-3.5 z-50",
-          "w-7 h-7 rounded-full",
-          "bg-sidebar border-2 border-sidebar-border",
-          "flex items-center justify-center",
-          "text-sidebar-foreground",
-          "transition-all duration-300",
+          "absolute top-1/2 -translate-y-1/2 -right-3.5 z-[60]",
+          "w-7 h-7 rounded-full bg-sidebar border-2 border-sidebar-border",
+          "flex items-center justify-center text-sidebar-foreground transition-all duration-300",
           "hover:bg-primary hover:text-white hover:border-primary",
-          "hover:shadow-[0_0_12px_rgba(var(--primary),0.5)]",
           "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
         )}
       >
-        <ChevronLeft 
+        <ChevronLeft
           className={cn(
             "h-3.5 w-3.5 transition-transform duration-300",
             isCollapsed && "rotate-180"
-          )} 
+          )}
         />
       </button>
 
-      {/* Bottom Navigation with Special Hover Effect */}
+      {/* Footer */}
       <SidebarFooter className="bg-sidebar border-t border-sidebar-border mt-auto">
         <SidebarMenu>
           {bottomNavigationItems.map((item) => (
@@ -164,14 +172,15 @@ const DashboardSidebar = () => {
                       : "text-sidebar-foreground hover:bg-white/8"
                   )}
                 >
-                  <item.icon 
+                  <item.icon
                     className={cn(
                       "h-5 w-5 flex-shrink-0 transition-all duration-200",
-                      !isActive(item.path) && "group-hover:text-cyan-400 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
-                    )} 
+                      !isActive(item.path) &&
+                        "group-hover:text-cyan-400 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
+                    )}
                   />
                   {!isCollapsed && (
-                    <span 
+                    <span
                       className={cn(
                         "font-medium transition-all duration-200 animate-in fade-in-50",
                         !isActive(item.path) && "group-hover:translate-x-0.5"

@@ -10,7 +10,8 @@ import RecommendedTips from "@/components/RecommendedTips";
 import Settings from "./Settings";
 import ComingSoon from "./ComingSoon";
 import AIAssistant from "./AIAssistant";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar, SidebarTrigger } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -19,7 +20,6 @@ const Dashboard = () => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -38,55 +38,127 @@ const Dashboard = () => {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full bg-background">
-        <DashboardSidebar />
-        <SidebarInset className="flex-1 overflow-auto">
-          <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-            <SidebarTrigger className="lg:hidden" />
-            <div className="flex-1">
-              <DashboardNavbar user={user} />
-            </div>
-          </header>
-          <main className="flex-1">
-            <Routes>
-              <Route
-                index
-                element={
-                  <div className="p-8">
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5 }}
-                    >
-                      <div className="mb-8">
-                        <h1 className="text-4xl font-bold text-foreground mb-2">
-                          Welcome back, {getUserName()} 👋
-                        </h1>
-                        <p className="text-muted-foreground">
-                          Here's a summary of your study performance.
-                        </p>
-                      </div>
+      <SidebarContentWrapper>
+        <header className="sticky top-0 z-10 flex h-16 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+          <SidebarTrigger className="lg:hidden" />
+          <div className="flex-1">
+            <DashboardNavbar user={user} />
+          </div>
+        </header>
 
-                      <DashboardCards />
-                      <RecommendedTips />
-                    </motion.div>
-                  </div>
-                }
-              />
-              <Route path="settings" element={<Settings />} />
-              <Route path="ai" element={<AIAssistant />} />
-              <Route path="tasks" element={<ComingSoon title="Tasks Manager" description="Organize and track your study tasks efficiently." />} />
-              <Route path="analytics" element={<ComingSoon title="Analytics Dashboard" description="Detailed insights into your learning patterns and progress." />} />
-              <Route path="notes" element={<ComingSoon title="Smart Notes" description="AI-powered note-taking and organization system." />} />
-              <Route path="focus" element={<ComingSoon title="Focus Mode" description="Distraction-free environment to boost your productivity." />} />
-              <Route path="profile" element={<ComingSoon title="User Profile" description="View and manage your learning profile and achievements." />} />
-              <Route path="faq" element={<ComingSoon title="FAQ & Help" description="Find answers to common questions about StudyPal." />} />
-            </Routes>
-          </main>
-        </SidebarInset>
-      </div>
+        <main className="flex-1 overflow-auto">
+          <Routes>
+            <Route
+              index
+              element={
+                <div className="p-8">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <div className="mb-8">
+                      <h1 className="text-4xl font-bold text-foreground mb-2">
+                        Welcome back, {getUserName()} 👋
+                      </h1>
+                      <p className="text-muted-foreground">
+                        Here's a summary of your study performance.
+                      </p>
+                    </div>
+
+                    <DashboardCards />
+                    <RecommendedTips />
+                  </motion.div>
+                </div>
+              }
+            />
+            <Route path="settings" element={<Settings />} />
+            <Route path="ai" element={<AIAssistant />} />
+            <Route
+              path="tasks"
+              element={
+                <ComingSoon
+                  title="Tasks Manager"
+                  description="Organize and track your study tasks efficiently."
+                />
+              }
+            />
+            <Route
+              path="analytics"
+              element={
+                <ComingSoon
+                  title="Analytics Dashboard"
+                  description="Detailed insights into your learning patterns and progress."
+                />
+              }
+            />
+            <Route
+              path="notes"
+              element={
+                <ComingSoon
+                  title="Smart Notes"
+                  description="AI-powered note-taking and organization system."
+                />
+              }
+            />
+            <Route
+              path="focus"
+              element={
+                <ComingSoon
+                  title="Focus Mode"
+                  description="Distraction-free environment to boost your productivity."
+                />
+              }
+            />
+            <Route
+              path="profile"
+              element={
+                <ComingSoon
+                  title="User Profile"
+                  description="View and manage your learning profile and achievements."
+                />
+              }
+            />
+            <Route
+              path="faq"
+              element={
+                <ComingSoon
+                  title="FAQ & Help"
+                  description="Find answers to common questions about StudyPal."
+                />
+              }
+            />
+          </Routes>
+        </main>
+      </SidebarContentWrapper>
     </SidebarProvider>
   );
 };
 
 export default Dashboard;
+
+/**
+ * Wrapper untuk menyesuaikan margin-left konten utama
+ * sesuai state sidebar collapse/expand
+ */
+const SidebarContentWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
+  return (
+    <div className="flex w-full min-h-screen bg-background">
+      {/* Sidebar fixed di kiri */}
+      <DashboardSidebar />
+
+      {/* Konten utama menyesuaikan sidebar */}
+      <div
+        className={cn(
+          "flex-1 transition-all duration-300 ease-in-out",
+          isCollapsed ? "ml-[--sidebar-width-icon]" : "ml-[--sidebar-width]"
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
