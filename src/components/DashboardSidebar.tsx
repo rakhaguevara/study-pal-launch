@@ -10,6 +10,7 @@ import {
   HelpCircle,
   ChevronLeft,
   BookOpen,
+  Lightbulb,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ const mainNavigationItems = [
   { name: "Notes", icon: FileText, path: "/dashboard/notes" },
   { name: "Focus Mode", icon: Focus, path: "/dashboard/focus" },
   { name: "AI Assistant", icon: Bot, path: "/dashboard/ai" },
+  { name: "Learning Style", icon: Lightbulb, path: "/dashboard/learning-style" },
   { name: "Profile", icon: User, path: "/dashboard/profile" },
 ];
 

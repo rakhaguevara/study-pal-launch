@@ -8,6 +8,7 @@ import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -17,25 +18,49 @@ const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const checkProfileAndNavigate = async (user: any) => {
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('quiz_completed')
+        .eq('firebase_uid', user.uid)
+        .single();
+
+      if (!profile) {
+        navigate("/onboarding");
+      } else if (!profile.quiz_completed) {
+        navigate("/quiz");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      console.error("Error checking profile:", error);
+      navigate("/onboarding");
+    }
+  };
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      let user;
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        user = result.user;
         toast({
           title: "Account created!",
           description: "You've been automatically signed in.",
         });
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        user = result.user;
         toast({
           title: "Welcome back!",
           description: "You've successfully signed in.",
         });
       }
-      navigate("/dashboard");
+      await checkProfileAndNavigate(user);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -49,12 +74,12 @@ const Login = () => {
 
   const handleGoogleAuth = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
       toast({
         title: "Welcome!",
         description: "You've successfully signed in with Google.",
       });
-      navigate("/dashboard");
+      await checkProfileAndNavigate(result.user);
     } catch (error: any) {
       toast({
         title: "Error",

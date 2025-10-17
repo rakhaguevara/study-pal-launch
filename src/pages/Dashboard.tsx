@@ -10,6 +10,7 @@ import RecommendedTips from "@/components/RecommendedTips";
 import Settings from "./Settings";
 import ComingSoon from "./ComingSoon";
 import AIAssistant from "./AIAssistant";
+import LearningStyle from "./LearningStyle";
 import { SidebarProvider, useSidebar, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +75,7 @@ const Dashboard = () => {
             />
             <Route path="settings" element={<Settings />} />
             <Route path="ai" element={<AIAssistant />} />
+            <Route path="learning-style" element={<LearningStyle />} />
             <Route
               path="tasks"
               element={
