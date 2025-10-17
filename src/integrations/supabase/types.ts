@@ -14,16 +14,156 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      quiz_results: {
+        Row: {
+          audio_score: number
+          created_at: string | null
+          date_taken: string | null
+          id: string
+          kinesthetic_score: number
+          quiz_level: Database["public"]["Enums"]["quiz_level"]
+          text_score: number
+          time_taken: number | null
+          total_score: number
+          user_id: string
+          visual_score: number
+        }
+        Insert: {
+          audio_score?: number
+          created_at?: string | null
+          date_taken?: string | null
+          id?: string
+          kinesthetic_score?: number
+          quiz_level: Database["public"]["Enums"]["quiz_level"]
+          text_score?: number
+          time_taken?: number | null
+          total_score?: number
+          user_id: string
+          visual_score?: number
+        }
+        Update: {
+          audio_score?: number
+          created_at?: string | null
+          date_taken?: string | null
+          id?: string
+          kinesthetic_score?: number
+          quiz_level?: Database["public"]["Enums"]["quiz_level"]
+          text_score?: number
+          time_taken?: number | null
+          total_score?: number
+          user_id?: string
+          visual_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_results_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recommendations: {
+        Row: {
+          content_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          source_url: string | null
+          style: Database["public"]["Enums"]["learning_style"]
+          thumbnail_url: string | null
+          title: string
+        }
+        Insert: {
+          content_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          source_url?: string | null
+          style: Database["public"]["Enums"]["learning_style"]
+          thumbnail_url?: string | null
+          title: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          source_url?: string | null
+          style?: Database["public"]["Enums"]["learning_style"]
+          thumbnail_url?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          age: number | null
+          class: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          email: string
+          firebase_uid: string
+          gender: Database["public"]["Enums"]["gender_type"] | null
+          id: string
+          learning_style: Database["public"]["Enums"]["learning_style"] | null
+          name: string
+          quiz_completed: boolean | null
+          school: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          age?: number | null
+          class?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          email: string
+          firebase_uid: string
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          id?: string
+          learning_style?: Database["public"]["Enums"]["learning_style"] | null
+          name: string
+          quiz_completed?: boolean | null
+          school?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          age?: number | null
+          class?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          email?: string
+          firebase_uid?: string
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          id?: string
+          learning_style?: Database["public"]["Enums"]["learning_style"] | null
+          name?: string
+          quiz_completed?: boolean | null
+          school?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_age: {
+        Args: { dob: string }
+        Returns: number
+      }
     }
     Enums: {
-      [_ in never]: never
+      gender_type: "male" | "female" | "other" | "prefer_not_to_say"
+      learning_style:
+        | "visual"
+        | "auditory"
+        | "reading_writing"
+        | "kinesthetic"
+        | "undetermined"
+      quiz_level: "beginner" | "intermediate" | "advanced"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +290,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      gender_type: ["male", "female", "other", "prefer_not_to_say"],
+      learning_style: [
+        "visual",
+        "auditory",
+        "reading_writing",
+        "kinesthetic",
+        "undetermined",
+      ],
+      quiz_level: ["beginner", "intermediate", "advanced"],
+    },
   },
 } as const
