@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      focus_sessions: {
+        Row: {
+          created_at: string | null
+          duration_minutes: number
+          id: string
+          session_date: string
+          subject: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_minutes?: number
+          id?: string
+          session_date?: string
+          subject?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_minutes?: number
+          id?: string
+          session_date?: string
+          subject?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_results: {
         Row: {
           audio_score: number
@@ -152,6 +187,10 @@ export type Database = {
     Functions: {
       calculate_age: {
         Args: { dob: string }
+        Returns: number
+      }
+      get_daily_focus_minutes: {
+        Args: { p_date: string; p_user_id: string }
         Returns: number
       }
     }

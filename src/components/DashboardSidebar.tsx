@@ -36,7 +36,6 @@ const mainNavigationItems = [
   { name: "Focus Mode", icon: Focus, path: "/dashboard/focus" },
   { name: "AI Assistant", icon: Bot, path: "/dashboard/ai" },
   { name: "Learning Style", icon: Lightbulb, path: "/dashboard/learning-style" },
-  { name: "Profile", icon: User, path: "/dashboard/profile" },
 ];
 
 const bottomNavigationItems = [

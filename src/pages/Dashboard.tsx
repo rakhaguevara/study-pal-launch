@@ -113,15 +113,6 @@ const Dashboard = () => {
               }
             />
             <Route
-              path="profile"
-              element={
-                <ComingSoon
-                  title="User Profile"
-                  description="View and manage your learning profile and achievements."
-                />
-              }
-            />
-            <Route
               path="faq"
               element={
                 <ComingSoon

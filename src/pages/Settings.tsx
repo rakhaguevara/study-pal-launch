@@ -1,144 +1,83 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Upload, Save, Clock, Calendar, Book, Loader2 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
+import { Edit2, Save, Eye, EyeOff, Loader2, RefreshCw, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db, storage } from "@/lib/firebase";
-import { updateProfile, updatePassword } from "firebase/auth";
-import { doc, setDoc, getDoc, collection, getDocs, query, orderBy } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useNavigate } from "react-router-dom";
+import { auth } from "@/lib/firebase";
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+import { supabase } from "@/integrations/supabase/client";
+import ProductivityHeatmap from "@/components/ProductivityHeatmap";
+import DashboardNavbar from "@/components/DashboardNavbar";
+import { format } from "date-fns";
 
-interface StudySession {
-  subject: string;
-  date: string;
-  duration: string;
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  date_of_birth: string | null;
+  age: number | null;
+  school: string | null;
+  class: string | null;
+  gender: string | null;
+  learning_style: string | null;
+  quiz_completed: boolean;
+}
+
+interface EditingField {
+  field: string | null;
+  value: string;
 }
 
 const Settings = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const user = auth.currentUser;
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isGoogleUser = user?.providerData.some((p) => p.providerId === "google.com");
 
-  const [formData, setFormData] = useState({
-    displayName: "",
-    email: "",
-    password: "",
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [editing, setEditing] = useState<EditingField>({ field: null, value: "" });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    old: false,
+    new: false,
+    confirm: false,
   });
 
-  const [photoURL, setPhotoURL] = useState<string>("");
-  const [studyHistory, setStudyHistory] = useState<StudySession[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-
-  // Check if user is logged in with Google
-  const isGoogleUser = user?.providerData.some(
-    (provider) => provider.providerId === "google.com"
-  );
-
   useEffect(() => {
-    if (user) {
-      setFormData({
-        displayName: user.displayName || "",
-        email: user.email || "",
-        password: "",
-      });
-      setPhotoURL(user.photoURL || "");
-      loadStudyHistory();
-    }
+    fetchUserProfile();
   }, [user]);
 
-  const loadStudyHistory = async () => {
+  const fetchUserProfile = async () => {
     if (!user) return;
 
     try {
-      setIsLoadingHistory(true);
-      const sessionsRef = collection(db, "users", user.uid, "studyHistory");
-      const q = query(sessionsRef, orderBy("timestamp", "desc"));
-      const querySnapshot = await getDocs(q);
-
-      const sessions: StudySession[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        sessions.push({
-          subject: data.subject || "Unknown",
-          date: data.date || new Date(data.timestamp?.toDate()).toLocaleDateString(),
-          duration: data.duration || "0m",
-        });
-      });
-
-      setStudyHistory(sessions);
-    } catch (error) {
-      console.error("Error loading study history:", error);
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  };
-
-  const handlePhotoUpload = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid File",
-        description: "Please select an image file.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File Too Large",
-        description: "Please select an image smaller than 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
       setIsLoading(true);
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("firebase_uid", user.uid)
+        .single();
 
-      // Upload to Firebase Storage
-      const storageRef = ref(storage, `profileImages/${user.uid}.jpg`);
-      await uploadBytes(storageRef, file);
-
-      // Get download URL
-      const downloadURL = await getDownloadURL(storageRef);
-
-      // Update Firebase Auth profile
-      await updateProfile(user, {
-        photoURL: downloadURL,
-      });
-
-      // Update Firestore
-      await setDoc(
-        doc(db, "users", user.uid),
-        { photoURL: downloadURL },
-        { merge: true }
-      );
-
-      setPhotoURL(downloadURL);
-
-      toast({
-        title: "Photo Updated",
-        description: "Your profile photo has been updated successfully.",
-      });
+      if (error) throw error;
+      setProfile(data);
     } catch (error) {
-      console.error("Error uploading photo:", error);
+      console.error("Error fetching profile:", error);
       toast({
-        title: "Upload Failed",
-        description: "Failed to upload photo. Please try again.",
+        title: "Error",
+        description: "Failed to load profile data",
         variant: "destructive",
       });
     } finally {
@@ -146,328 +85,421 @@ const Settings = () => {
     }
   };
 
-  const handleSaveChanges = async () => {
-    if (!user) {
+  const handleEdit = (field: string, currentValue: string) => {
+    setEditing({ field, value: currentValue || "" });
+  };
+
+  const handleSave = async (field: string) => {
+    if (!profile || !user) return;
+
+    try {
+      setIsSaving(true);
+
+      // Validation
+      if (field === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editing.value)) {
+        toast({
+          title: "Invalid Email",
+          description: "Please enter a valid email address",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (field === "name" && editing.value.trim().length < 2) {
+        toast({
+          title: "Invalid Name",
+          description: "Name must be at least 2 characters",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update in database
+      const updateData: Record<string, any> = {};
+      updateData[field] = editing.value;
+
+      const { error } = await supabase
+        .from("user_profiles")
+        .update(updateData)
+        .eq("id", profile.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setProfile({ ...profile, [field]: editing.value } as UserProfile);
+      setEditing({ field: null, value: "" });
+
       toast({
-        title: "Error",
-        description: "No user is currently logged in.",
+        title: "✅ Profile updated successfully!",
+        description: `Your ${field} has been updated`,
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!user || isGoogleUser) return;
+
+    if (passwordData.newPassword.length < 8) {
+      toast({
+        title: "Weak Password",
+        description: "Password must be at least 8 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: "Passwords Don't Match",
+        description: "New password and confirmation must match",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      setIsLoading(true);
-      let updatedSuccessfully = false;
+      setIsSaving(true);
 
-      // Update displayName if changed and not empty
-      if (formData.displayName && formData.displayName !== user.displayName) {
-        try {
-          await updateProfile(user, {
-            displayName: formData.displayName,
-          });
+      // Re-authenticate user first
+      const credential = EmailAuthProvider.credential(
+        user.email!,
+        passwordData.oldPassword
+      );
+      await reauthenticateWithCredential(user, credential);
 
-          // Update Firestore first
-          await setDoc(
-            doc(db, "users", user.uid),
-            { 
-              displayName: formData.displayName,
-              updatedAt: new Date().toISOString()
-            },
-            { merge: true }
-          );
+      // Update password
+      await updatePassword(user, passwordData.newPassword);
 
-          // Force reload user to get updated profile
-          await user.reload();
-          
-          // Force immediate state update
-          const updatedUser = auth.currentUser;
-          if (updatedUser) {
-            setFormData({
-              displayName: updatedUser.displayName || "",
-              email: updatedUser.email || "",
-              password: "",
-            });
-          }
+      toast({
+        title: "🔐 Password updated successfully!",
+        description: "Your password has been changed",
+      });
 
-          updatedSuccessfully = true;
-        } catch (error) {
-          console.error("Error updating display name:", error);
-          throw error;
-        }
-      }
-
-      // Update password if provided and not a Google user
-      if (formData.password && !isGoogleUser) {
-        if (formData.password.length < 6) {
-          toast({
-            title: "Weak Password",
-            description: "Password should be at least 6 characters.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        try {
-          await updatePassword(user, formData.password);
-          
-          // Force reload to ensure changes are applied
-          await user.reload();
-          
-          // Clear password field immediately
-          setFormData({ ...formData, password: "" });
-          
-          toast({
-            title: "Password Updated",
-            description: "Your password has been changed successfully.",
-          });
-          
-          updatedSuccessfully = true;
-        } catch (error) {
-          console.error("Error updating password:", error);
-          throw error;
-        }
-      }
-
-      if (updatedSuccessfully) {
-        toast({
-          title: "Profile Updated",
-          description: "Your profile has been updated successfully.",
-        });
-
-        // Refresh the form with updated data
-        setFormData({
-          displayName: user.displayName || "",
-          email: user.email || "",
-          password: "",
-        });
-      } else if (!formData.password && formData.displayName === user.displayName) {
-        toast({
-          title: "No Changes",
-          description: "No changes were made to your profile.",
-        });
-      }
+      setPasswordData({ oldPassword: "", newPassword: "", confirmPassword: "" });
     } catch (error: any) {
-      console.error("Error saving changes:", error);
+      console.error("Error updating password:", error);
       
-      let errorMessage = "Failed to save changes. Please try again.";
-      
-      if (error.code === "auth/requires-recent-login") {
-        errorMessage = "For security reasons, please log out and log in again before changing your password.";
-      } else if (error.code === "auth/weak-password") {
-        errorMessage = "Password should be at least 6 characters.";
-      } else if (error.code === "auth/invalid-email") {
-        errorMessage = "Invalid email address.";
-      } else if (error.message) {
-        errorMessage = error.message;
+      let errorMessage = "Failed to update password";
+      if (error.code === "auth/wrong-password") {
+        errorMessage = "Current password is incorrect";
+      } else if (error.code === "auth/requires-recent-login") {
+        errorMessage = "Please log out and log in again before changing your password";
       }
 
       toast({
-        title: "Update Failed",
+        title: "⚠️ Update failed",
         description: errorMessage,
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-orange-50/20 to-blue-50/20">
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileChange}
-        className="hidden"
-      />
+  const renderEditableField = (
+    label: string,
+    field: keyof UserProfile,
+    value: string | null,
+    type: "text" | "date" | "select" = "text",
+    options?: { value: string; label: string }[]
+  ) => {
+    const isEditing = editing.field === field;
+    const displayValue = value || "Not set";
 
-      {/* Navbar */}
-      <motion.nav
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="bg-white border-b border-border sticky top-0 z-50 backdrop-blur-sm bg-white/90"
-      >
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-blue-500 to-indigo-600 bg-clip-text text-transparent">
-            StudyPal Settings
-          </h1>
+    return (
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">{label}</Label>
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <>
+              {type === "select" && options ? (
+                <Select value={editing.value} onValueChange={(val) => setEditing({ ...editing, value: val })}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  type={type}
+                  value={editing.value}
+                  onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                  className="flex-1"
+                  autoFocus
+                />
+              )}
+              <Button
+                size="sm"
+                onClick={() => handleSave(field)}
+                disabled={isSaving}
+                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setEditing({ field: null, value: "" })}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="flex-1 p-2 rounded-md bg-muted/50 text-sm">
+                {type === "date" && value ? format(new Date(value), "PPP") : displayValue}
+              </div>
+              {field !== "email" || !isGoogleUser ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleEdit(field, value || "")}
+                  className="hover:bg-primary/10"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+              ) : null}
+            </>
+          )}
         </div>
-      </motion.nav>
+        {field === "email" && isGoogleUser && (
+          <p className="text-xs text-muted-foreground">Email cannot be changed for Google accounts</p>
+        )}
+      </div>
+    );
+  };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Profile not found</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <DashboardNavbar user={user} />
+      
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        {/* Profile Card */}
+        {/* Account Information */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="border-border shadow-lg hover:shadow-xl transition-shadow duration-300">
+          <Card className="border-border shadow-lg">
             <CardHeader>
-              <CardTitle className="text-2xl font-bold text-foreground">User Profile</CardTitle>
-              <CardDescription>Manage your account information and preferences</CardDescription>
+              <CardTitle className="text-2xl font-bold">Account Information</CardTitle>
+              <CardDescription>Manage your personal details and preferences</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Profile Photo Section */}
-              <div className="flex items-center gap-6">
-                <Avatar className="h-24 w-24 border-4 border-gradient-to-r from-orange-400 to-blue-500">
-                  <AvatarImage src={photoURL} />
-                  <AvatarFallback className="bg-gradient-to-r from-orange-400 to-blue-500 text-white text-2xl">
-                    {formData.displayName?.substring(0, 2).toUpperCase() || 
-                     formData.email?.substring(0, 2).toUpperCase() || "SP"}
-                  </AvatarFallback>
-                </Avatar>
-                <Button
-                  onClick={handlePhotoUpload}
-                  variant="outline"
-                  disabled={isLoading}
-                  className="gap-2 hover:bg-gradient-to-r hover:from-orange-400 hover:via-blue-500 hover:to-indigo-600 hover:text-white transition-all duration-300"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4" />
-                      Change Profile Photo
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Form Fields */}
+            <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
+                {renderEditableField("Full Name", "name", profile.name)}
+                {renderEditableField("Email", "email", profile.email)}
+                {renderEditableField("Date of Birth", "date_of_birth", profile.date_of_birth, "date")}
                 <div className="space-y-2">
-                  <Label htmlFor="displayName">Username</Label>
-                  <Input
-                    id="displayName"
-                    value={formData.displayName}
-                    onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                    placeholder="Enter your username"
-                    className="focus:ring-2 focus:ring-orange-400/50"
-                    disabled={isLoading}
-                  />
+                  <Label className="text-sm font-medium">Age</Label>
+                  <div className="p-2 rounded-md bg-muted/50 text-sm">
+                    {profile.age || "Not calculated"} years
+                  </div>
+                  <p className="text-xs text-muted-foreground">Auto-calculated from date of birth</p>
+                </div>
+                {renderEditableField("School / Institution", "school", profile.school)}
+                {renderEditableField("Class", "class", profile.class)}
+                {renderEditableField("Gender", "gender", profile.gender, "select", [
+                  { value: "male", label: "Male" },
+                  { value: "female", label: "Female" },
+                  { value: "other", label: "Other" },
+                  { value: "prefer_not_to_say", label: "Prefer not to say" },
+                ])}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Security Settings */}
+        {!isGoogleUser && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card className="border-border shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold">Security Settings</CardTitle>
+                <CardDescription>Change your password to keep your account secure</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Current Password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showPasswords.old ? "text" : "password"}
+                      value={passwordData.oldPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
+                      placeholder="Enter current password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3"
+                      onClick={() => setShowPasswords({ ...showPasswords, old: !showPasswords.old })}
+                    >
+                      {showPasswords.old ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    placeholder="Your email"
-                    className="focus:ring-2 focus:ring-blue-500/50"
-                    disabled={true}
-                  />
-                  {isGoogleUser && (
-                    <p className="text-xs text-muted-foreground">
-                      Email cannot be changed for Google accounts
-                    </p>
-                  )}
+                  <Label>New Password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showPasswords.new ? "text" : "password"}
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                      placeholder="Enter new password (min. 8 characters)"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3"
+                      onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                    >
+                      {showPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
 
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="password">Change Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder={isGoogleUser ? "Not available for Google accounts" : "Enter new password (min. 6 characters)"}
-                    className="focus:ring-2 focus:ring-indigo-500/50"
-                    disabled={isGoogleUser || isLoading}
-                  />
-                  {isGoogleUser && (
-                    <p className="text-xs text-muted-foreground">
-                      Password cannot be changed for Google accounts
-                    </p>
-                  )}
+                <div className="space-y-2">
+                  <Label>Confirm New Password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showPasswords.confirm ? "text" : "password"}
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                      placeholder="Confirm new password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3"
+                      onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                    >
+                      {showPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handlePasswordChange}
+                  disabled={isSaving || !passwordData.oldPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                  className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                >
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Update Password
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {isGoogleUser && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card className="border-border shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold">Security Settings</CardTitle>
+                <CardDescription>Your account security is managed by Google</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Your account uses Google Sign-In. Password cannot be changed here. Please manage your password through your Google account settings.
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Learning Data Overview */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="border-border shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold">Learning Data Overview</CardTitle>
+              <CardDescription>Your learning progress and style</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Learning Style</Label>
+                  <div className="p-3 rounded-md bg-gradient-to-r from-primary/10 to-secondary/10 text-sm font-semibold capitalize">
+                    {profile.learning_style || "Not determined"}
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Quiz Status</Label>
+                  <div className="p-3 rounded-md bg-muted/50 text-sm">
+                    {profile.quiz_completed ? "✅ Completed" : "⏳ Not completed"}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Account Created</Label>
+                  <div className="p-3 rounded-md bg-muted/50 text-sm">
+                    {user?.metadata.creationTime ? format(new Date(user.metadata.creationTime), "PP") : "Unknown"}
+                  </div>
                 </div>
               </div>
 
-              {/* Save Button */}
               <Button
-                onClick={handleSaveChanges}
-                disabled={isLoading}
-                className="w-full bg-gradient-to-r from-orange-400 via-blue-500 to-indigo-600 hover:shadow-lg hover:shadow-orange-500/50 transition-all duration-300 gap-2"
+                onClick={() => navigate("/quiz")}
+                variant="outline"
+                className="w-full gap-2 hover:bg-primary/10"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save Changes
-                  </>
-                )}
+                <RefreshCw className="h-4 w-4" />
+                {profile.quiz_completed ? "Retake Learning Style Quiz" : "Take Learning Style Quiz"}
               </Button>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Study History Card */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="border-border shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold text-foreground">Study History</CardTitle>
-              <CardDescription>Your recent learning activities</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingHistory ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-                </div>
-              ) : studyHistory.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Book className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Belum ada riwayat belajar</p>
-                  <p className="text-sm mt-1">Mulai belajar untuk melihat riwayat Anda di sini</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {studyHistory.map((item, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ x: -20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: 0.3 + index * 0.1 }}
-                      className="flex items-center justify-between p-4 rounded-lg border border-border hover:border-orange-400/50 hover:bg-gradient-to-r hover:from-orange-50/30 hover:to-blue-50/30 transition-all duration-300 group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-full bg-gradient-to-r from-orange-400/10 to-blue-500/10 group-hover:from-orange-400/20 group-hover:to-blue-500/20 transition-colors">
-                          <Book className="h-5 w-5 text-orange-500" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-foreground">{item.subject}</h4>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {item.date}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {item.duration}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+        {/* Productivity Tracker */}
+        {profile.id && <ProductivityHeatmap userId={profile.id} />}
       </div>
     </div>
   );
