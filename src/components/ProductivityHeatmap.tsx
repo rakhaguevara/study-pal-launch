@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import CalendarHeatmap from "react-calendar-heatmap";
 import "react-calendar-heatmap/dist/styles.css";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, subDays, startOfYear } from "date-fns";
 
 interface HeatmapValue {
   date: string;
@@ -20,6 +20,7 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
   const [heatmapData, setHeatmapData] = useState<HeatmapValue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalActiveDays, setTotalActiveDays] = useState(0);
+  const [totalFocusHours, setTotalFocusHours] = useState(0);
 
   useEffect(() => {
     fetchFocusData();
@@ -29,8 +30,8 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
     try {
       setIsLoading(true);
       
-      // Get data for last 90 days
-      const startDate = format(subDays(new Date(), 90), "yyyy-MM-dd");
+      // Get data for last 12 months
+      const startDate = format(startOfYear(new Date()), "yyyy-MM-dd");
       const endDate = format(new Date(), "yyyy-MM-dd");
 
       const { data, error } = await supabase
@@ -59,8 +60,13 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
 
       setHeatmapData(heatmapValues);
       
-      // Count active days (> 0 minutes)
-      setTotalActiveDays(heatmapValues.filter(v => v.count > 0).length);
+      // Calculate statistics
+      const activeDays = heatmapValues.filter(v => v.count > 0).length;
+      const totalMinutes = heatmapValues.reduce((sum, v) => sum + v.count, 0);
+      const totalHours = Math.floor(totalMinutes / 60);
+      
+      setTotalActiveDays(activeDays);
+      setTotalFocusHours(totalHours);
     } catch (error) {
       console.error("Error fetching focus data:", error);
     } finally {
@@ -72,29 +78,22 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
     if (!value || value.count === 0) return "color-empty";
     
     const hours = value.count / 60;
-    if (hours >= 8) return "color-scale-4"; // Dark green
-    if (hours >= 6) return "color-scale-3"; // Medium green
-    if (hours >= 4) return "color-scale-2"; // Light green
+    if (hours >= 8) return "color-scale-4"; // Bright green
+    if (hours >= 4) return "color-scale-3"; // Medium green
+    if (hours >= 1) return "color-scale-2"; // Light green
     return "color-scale-1"; // Very light green
-  };
-
-  const formatTooltip = (value: HeatmapValue | undefined) => {
-    if (!value || value.count === 0) return "No activity";
-    
-    const hours = Math.floor(value.count / 60);
-    const minutes = value.count % 60;
-    return `${hours}h ${minutes}m focus time`;
   };
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="shadow-md">
         <CardHeader>
-          <CardTitle>Study Activity Tracker</CardTitle>
-          <CardDescription>Loading your productivity data...</CardDescription>
+          <CardTitle className="text-xl font-bold bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">
+            📅 Study Activity Tracker
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-40 w-full rounded-lg" />
         </CardContent>
       </Card>
     );
@@ -104,51 +103,59 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
     <motion.div
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ delay: 0.4 }}
+      transition={{ delay: 0.4, duration: 0.5 }}
     >
-      <Card className="border-border shadow-lg hover:shadow-xl transition-shadow duration-300">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-foreground flex items-center gap-2">
-            📊 Study Activity Tracker
+      <Card className="shadow-md rounded-2xl bg-white border-border">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
+            📅 Study Activity Tracker
           </CardTitle>
-          <CardDescription>
-            Your daily learning activity over the past 90 days
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="heatmap-container">
+        <CardContent className="space-y-6">
+          {/* Heatmap Grid */}
+          <div className="heatmap-container overflow-x-auto">
             <style>{`
               .react-calendar-heatmap {
                 width: 100%;
               }
               .react-calendar-heatmap .color-empty {
-                fill: hsl(var(--muted));
+                fill: #E5E7EB;
+                rx: 4;
               }
               .react-calendar-heatmap .color-scale-1 {
-                fill: hsl(142, 76%, 85%);
+                fill: #A7F3D0;
+                rx: 4;
               }
               .react-calendar-heatmap .color-scale-2 {
-                fill: hsl(142, 76%, 65%);
+                fill: #6EE7B7;
+                rx: 4;
               }
               .react-calendar-heatmap .color-scale-3 {
-                fill: hsl(142, 76%, 45%);
+                fill: #34D399;
+                rx: 4;
               }
               .react-calendar-heatmap .color-scale-4 {
-                fill: hsl(142, 76%, 30%);
+                fill: #10B981;
+                rx: 4;
               }
               .react-calendar-heatmap text {
-                fill: hsl(var(--muted-foreground));
+                fill: #6B7280;
                 font-size: 10px;
+                font-weight: 500;
+              }
+              .react-calendar-heatmap rect {
+                transition: all 0.2s ease;
               }
               .react-calendar-heatmap rect:hover {
-                stroke: hsl(var(--primary));
+                stroke: #F97316;
                 stroke-width: 2px;
                 cursor: pointer;
+                transform: scale(1.05);
               }
             `}</style>
             
             <CalendarHeatmap
-              startDate={subDays(new Date(), 90)}
+              startDate={startOfYear(new Date())}
               endDate={new Date()}
               values={heatmapData}
               classForValue={getColorClass}
@@ -156,31 +163,40 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
             />
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-border">
-            <div className="flex items-center gap-6">
+          {/* Divider */}
+          <div className="border-t border-border" />
+
+          {/* Activity Summary */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded bg-muted"></div>
-                <span className="text-xs text-muted-foreground">No activity</span>
+                <span className="text-2xl">🔥</span>
+                <div>
+                  <p className="text-sm text-muted-foreground">Active Study Days</p>
+                  <p className="text-xl font-bold text-foreground">{totalActiveDays}</p>
+                </div>
               </div>
+              
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: "hsl(142, 76%, 85%)" }}></div>
-                <span className="text-xs text-muted-foreground">&lt; 4h</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: "hsl(142, 76%, 65%)" }}></div>
-                <span className="text-xs text-muted-foreground">4-6h</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: "hsl(142, 76%, 45%)" }}></div>
-                <span className="text-xs text-muted-foreground">6-8h</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: "hsl(142, 76%, 30%)" }}></div>
-                <span className="text-xs text-muted-foreground">≥ 8h</span>
+                <span className="text-2xl">⏱️</span>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Focus Time</p>
+                  <p className="text-xl font-bold text-foreground">{totalFocusHours}h</p>
+                </div>
               </div>
             </div>
-            <div className="text-sm font-medium text-foreground">
-              <span className="text-primary font-bold">{totalActiveDays}</span> active days this period
+
+            {/* Legend */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Less</span>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#E5E7EB" }} />
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#A7F3D0" }} />
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#6EE7B7" }} />
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#34D399" }} />
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#10B981" }} />
+              </div>
+              <span>More</span>
             </div>
           </div>
         </CardContent>
