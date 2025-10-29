@@ -13,16 +13,41 @@ import AIAssistant from "./AIAssistant";
 import LearningStyle from "./LearningStyle";
 import { SidebarProvider, useSidebar, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import StudyMaterialManager from "@/components/StudyMaterialManager";
+import { supabase } from "@/integrations/supabase/client";
+import { useStudyStore } from "@/store/useStudyStore";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
+  const setUserId = useStudyStore(state => state.setUserId);
+  const setLearningStyle = useStudyStore(state => state.setLearningStyle);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      if (user) {
+        setUserId(user.uid);
+        fetchUserLearningStyle(user.uid);
+      }
     });
     return () => unsubscribe();
   }, []);
+
+  const fetchUserLearningStyle = async (uid: string) => {
+    try {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('learning_style')
+        .eq('firebase_uid', uid)
+        .single();
+
+      if (data?.learning_style) {
+        setLearningStyle(data.learning_style as any);
+      }
+    } catch (error) {
+      // Error fetching learning style - will use default
+    }
+  };
 
   const getUserName = () => {
     if (!user) return "User";
@@ -76,6 +101,14 @@ const Dashboard = () => {
             <Route path="settings" element={<Settings />} />
             <Route path="ai" element={<AIAssistant />} />
             <Route path="learning-style" element={<LearningStyle />} />
+            <Route
+              path="materials"
+              element={
+                <div className="p-8">
+                  <StudyMaterialManager />
+                </div>
+              }
+            />
             <Route
               path="tasks"
               element={

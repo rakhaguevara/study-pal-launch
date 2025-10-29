@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Edit2, Save, Eye, EyeOff, Loader2, RefreshCw, BookOpen } from "lucide-react";
+import { Edit2, Save, Eye, EyeOff, Loader2, RefreshCw, BookOpen, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { auth } from "@/lib/firebase";
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { supabase } from "@/integrations/supabase/client";
 import ProductivityHeatmap from "@/components/ProductivityHeatmap";
-import DashboardNavbar from "@/components/DashboardNavbar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 
 interface UserProfile {
@@ -26,6 +26,7 @@ interface UserProfile {
   gender: string | null;
   learning_style: string | null;
   quiz_completed: boolean;
+  avatar_url: string | null;
 }
 
 interface EditingField {
@@ -43,6 +44,8 @@ const Settings = () => {
   const [editing, setEditing] = useState<EditingField>({ field: null, value: "" });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Password change state
   const [passwordData, setPasswordData] = useState({
@@ -205,6 +208,83 @@ const Settings = () => {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user || !profile) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid File",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsUploadingAvatar(true);
+
+      // Upload to Supabase Storage
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.uid}_${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      // Update profile in database
+      const { error: updateError } = await supabase
+        .from("user_profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", profile.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setProfile({ ...profile, avatar_url: publicUrl });
+
+      toast({
+        title: "📸 Avatar updated successfully!",
+        description: "Your profile picture has been updated",
+      });
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload avatar. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const renderEditableField = (
     label: string,
     field: keyof UserProfile,
@@ -303,8 +383,6 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardNavbar user={user} />
-      
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
         {/* Account Information */}
         <motion.div
@@ -317,7 +395,42 @@ const Settings = () => {
               <CardTitle className="text-2xl font-bold">Account Information</CardTitle>
               <CardDescription>Manage your personal details and preferences</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Profile Picture Upload Section */}
+              <div className="flex flex-col items-center gap-4 pb-4 border-b">
+                <div className="relative">
+                  <Avatar className="w-24 h-24 border-4 border-border">
+                    <AvatarImage src={profile.avatar_url || user?.photoURL || undefined} />
+                    <AvatarFallback className="bg-gradient-to-r from-orange-400 to-blue-500 text-white text-2xl">
+                      {profile.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleAvatarUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary hover:bg-primary/90 flex items-center justify-center text-white shadow-lg transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Upload new profile picture"
+                  >
+                    {isUploadingAvatar ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground">{profile.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{profile.email}</p>
+                </div>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 {renderEditableField("Full Name", "name", profile.name)}
                 {renderEditableField("Email", "email", profile.email)}

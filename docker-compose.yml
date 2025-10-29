@@ -1,0 +1,46 @@
+services:
+  # React Frontend Application
+  study-pal-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+        - VITE_OPENAI_API_KEY=${VITE_OPENAI_API_KEY}
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+    # Don't mount volumes in production - use the built files from the image
+    networks:
+      - study-pal-network
+
+  # Development version with hot reload
+  study-pal-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+        - VITE_OPENAI_API_KEY=${VITE_OPENAI_API_KEY}
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - study-pal-network
+    profiles:
+      - dev
+
+networks:
+  study-pal-network:
+    driver: bridge
+
+volumes:
+  node_modules:
+

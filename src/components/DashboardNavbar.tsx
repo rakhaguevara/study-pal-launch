@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import LearningStyleSelector from "@/components/LearningStyleSelector";
 
 interface DashboardNavbarProps {
   user: User;
@@ -50,7 +51,11 @@ const DashboardNavbar = ({ user }: DashboardNavbarProps) => {
           <h1 className="text-2xl font-bold gradient-text">StudyPal</h1>
         </div>
 
-        <DropdownMenu>
+        {/* Learning Style Selector & User Menu */}
+        <div className="flex items-center gap-3">
+          <LearningStyleSelector />
+
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-3 hover:opacity-80 transition-opacity">
               <Avatar>
@@ -80,7 +85,8 @@ const DashboardNavbar = ({ user }: DashboardNavbarProps) => {
               Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+          </DropdownMenu>
+        </div>
       </div>
     </nav>
   );

@@ -78,10 +78,24 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
     if (!value || value.count === 0) return "color-empty";
     
     const hours = value.count / 60;
-    if (hours >= 8) return "color-scale-4"; // Bright green
-    if (hours >= 4) return "color-scale-3"; // Medium green
-    if (hours >= 1) return "color-scale-2"; // Light green
-    return "color-scale-1"; // Very light green
+    if (hours >= 6) return "color-scale-4"; // Dark blue
+    if (hours >= 3) return "color-scale-3"; // Medium blue
+    if (hours >= 1) return "color-scale-2"; // Light blue
+    return "color-scale-1"; // Very light blue
+  };
+
+  const getTooltipData = (value: HeatmapValue | undefined, date: string) => {
+    if (!value || value.count === 0) return null;
+    
+    const hours = Math.floor(value.count / 60);
+    const minutes = value.count % 60;
+    
+    return {
+      date: format(new Date(date), "MMMM d, yyyy"),
+      time: hours > 0 
+        ? `${hours}h ${minutes}min` 
+        : `${minutes}min`
+    };
   };
 
   if (isLoading) {
@@ -107,8 +121,8 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
     >
       <Card className="shadow-md rounded-2xl bg-white border-border">
         <CardHeader className="pb-4">
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent flex items-center gap-2">
-            📅 Study Activity Tracker
+          <CardTitle className="text-2xl font-bold flex items-center gap-2 text-[#1E3A8A]">
+            📊 Study Activity Tracker
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -119,23 +133,23 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
                 width: 100%;
               }
               .react-calendar-heatmap .color-empty {
-                fill: #E5E7EB;
+                fill: #EBEDF0;
                 rx: 4;
               }
               .react-calendar-heatmap .color-scale-1 {
-                fill: #A7F3D0;
+                fill: #C6F6D5;
                 rx: 4;
               }
               .react-calendar-heatmap .color-scale-2 {
-                fill: #6EE7B7;
+                fill: #9AE6B4;
                 rx: 4;
               }
               .react-calendar-heatmap .color-scale-3 {
-                fill: #34D399;
+                fill: #68D391;
                 rx: 4;
               }
               .react-calendar-heatmap .color-scale-4 {
-                fill: #10B981;
+                fill: #38A169;
                 rx: 4;
               }
               .react-calendar-heatmap text {
@@ -147,10 +161,16 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
                 transition: all 0.2s ease;
               }
               .react-calendar-heatmap rect:hover {
-                stroke: #F97316;
+                stroke: #FF6B00;
                 stroke-width: 2px;
                 cursor: pointer;
-                transform: scale(1.05);
+                transform: scale(1.08);
+              }
+              .react-calendar-heatmap .month-label {
+                fill: #111827;
+              }
+              .react-calendar-heatmap .wday-label {
+                fill: #6B7280;
               }
             `}</style>
             
@@ -160,6 +180,13 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
               values={heatmapData}
               classForValue={getColorClass}
               showWeekdayLabels
+              tooltipDataAttrs={(value) => {
+                if (!value || !value.date) return {};
+                const tooltipInfo = getTooltipData(value, value.date);
+                return tooltipInfo ? {
+                  'data-tip': `${tooltipInfo.date}: ${tooltipInfo.time} of focus time`
+                } : {};
+              }}
             />
           </div>
 
@@ -188,15 +215,15 @@ const ProductivityHeatmap = ({ userId }: ProductivityHeatmapProps) => {
 
             {/* Legend */}
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Less</span>
+              <span className="text-[#6B7280]">Less</span>
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#E5E7EB" }} />
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#A7F3D0" }} />
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#6EE7B7" }} />
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#34D399" }} />
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#10B981" }} />
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#EBEDF0" }} />
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#C6F6D5" }} />
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#9AE6B4" }} />
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#68D391" }} />
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: "#38A169" }} />
               </div>
-              <span>More</span>
+              <span className="text-[#111827] font-semibold">More</span>
             </div>
           </div>
         </CardContent>

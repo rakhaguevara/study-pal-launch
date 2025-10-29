@@ -30,6 +30,7 @@ import {
 
 const mainNavigationItems = [
   { name: "Dashboard", icon: Home, path: "/dashboard" },
+  { name: "Study Materials", icon: BookOpen, path: "/dashboard/materials" },
   { name: "Tasks", icon: CheckSquare, path: "/dashboard/tasks" },
   { name: "Analytics", icon: BarChart3, path: "/dashboard/analytics" },
   { name: "Notes", icon: FileText, path: "/dashboard/notes" },
