@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Lightbulb, CheckCircle2, TrendingUp, Eye, Headphones, BookMarked, Hand } from 'lucide-react';
+import { BookOpen, Lightbulb, CheckCircle2, TrendingUp, Eye, Headphones, BookMarked, Hand, Play, Pause, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useStudyStore } from '@/store/useStudyStore';
 
 interface ParsedSection {
@@ -14,9 +15,23 @@ interface ParsedSection {
 
 interface ParsedSummaryProps {
   summary: string;
+  insights?: string[];
+  studyPath?: string;
+  ttsOptimizedText?: string;
+  onPlayAudio?: (text: string) => void;
+  onPauseAudio?: () => void;
+  isPlaying?: boolean;
 }
 
-const ParsedSummary = ({ summary }: ParsedSummaryProps) => {
+const ParsedSummary = ({ 
+  summary, 
+  insights = [], 
+  studyPath,
+  ttsOptimizedText,
+  onPlayAudio,
+  onPauseAudio,
+  isPlaying = false
+}: ParsedSummaryProps) => {
   const learningStyle = useStudyStore(state => state.learningStyle);
   const [sections, setSections] = useState<ParsedSection[]>([]);
   const [isParsing, setIsParsing] = useState(true);
@@ -150,28 +165,126 @@ const ParsedSummary = ({ summary }: ParsedSummaryProps) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {sections.map((section, index) => (
+          {/* Detailed Summary Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-6 bg-background rounded-lg border-2 border-blue-200 dark:border-blue-800"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <BookMarked className="h-6 w-6 text-blue-500" />
+                <h3 className="text-xl font-semibold text-foreground">📘 Detailed Summary</h3>
+              </div>
+              {/* Audio Playback Button for Auditory Learners */}
+              {learningStyle === 'auditory' && ttsOptimizedText && onPlayAudio && onPauseAudio && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (isPlaying) {
+                      onPauseAudio();
+                    } else {
+                      onPlayAudio(ttsOptimizedText);
+                    }
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  {isPlaying ? (
+                    <>
+                      <Pause className="h-4 w-4" />
+                      Pause Audio
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4" />
+                      Listen
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+            <div className="space-y-4">
+              {sections.length > 0 ? (
+                sections.map((section, index) => (
+                  <div key={index} className="space-y-3">
+                    {section.content.map((item, itemIndex) => (
+                      <p key={itemIndex} className="text-foreground leading-relaxed">
+                        {item}
+                      </p>
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <div className="text-foreground whitespace-pre-wrap leading-relaxed">
+                  {summary}
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Key Insights Section */}
+          {insights && insights.length > 0 && (
             <motion.div
-              key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="p-4 bg-background rounded-lg border-2 border-muted"
+              transition={{ delay: 0.2 }}
+              className="p-6 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-950 dark:to-yellow-950 rounded-lg border-2 border-orange-200 dark:border-orange-800"
             >
-              <div className="flex items-center gap-3 mb-3">
-                {section.icon}
-                <h3 className="text-lg font-semibold text-foreground">{section.title}</h3>
+              <div className="flex items-center gap-3 mb-4">
+                <Lightbulb className="h-6 w-6 text-orange-500" />
+                <h3 className="text-xl font-semibold text-foreground">💡 Key Insights</h3>
               </div>
               <ul className="space-y-3">
-                {section.content.map((item, itemIndex) => (
-                  <li key={itemIndex} className="flex items-start gap-3 text-sm">
-                    <TrendingUp className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-foreground">{item}</span>
-                  </li>
+                {insights.map((insight, index) => (
+                  <motion.li
+                    key={index}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + index * 0.05 }}
+                    className="flex items-start gap-3"
+                  >
+                    <TrendingUp className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-foreground font-medium">{insight}</span>
+                  </motion.li>
                 ))}
               </ul>
             </motion.div>
-          ))}
+          )}
+
+          {/* Suggested Study Path for Kinesthetic Learners */}
+          {learningStyle === 'kinesthetic' && studyPath && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 rounded-lg border-2 border-green-200 dark:border-green-800"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <Target className="h-6 w-6 text-green-500" />
+                <h3 className="text-xl font-semibold text-foreground">📖 Suggested Study Path</h3>
+              </div>
+              <div className="text-foreground whitespace-pre-wrap leading-relaxed">
+                {studyPath}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Short Summary Recap */}
+          {insights && insights.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="p-4 bg-muted/50 rounded-lg border border-border"
+            >
+              <h4 className="text-sm font-semibold text-foreground mb-2">Quick Recap</h4>
+              <p className="text-sm text-muted-foreground">
+                This material covers {insights.length} key {insights.length === 1 ? 'insight' : 'insights'}. 
+                Review the detailed summary above for comprehensive understanding.
+              </p>
+            </motion.div>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -10,6 +10,9 @@ import {
   BookOpen,
   GraduationCap,
   X,
+  Play,
+  Pause,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +39,9 @@ const StudyMaterialManager = () => {
     uploadedFileName,
     fileContent,
     summary,
+    insights,
+    studyPath,
+    ttsOptimizedText,
     flashcards,
     quizQuestions,
     setUploadedFile,
@@ -54,6 +60,12 @@ const StudyMaterialManager = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [youtubeLinks, setYoutubeLinks] = useState<string[]>([]);
   const [articleLinks, setArticleLinks] = useState<string[]>([]);
+  
+  // Audio TTS state
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const audioProgressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { generateSummary, generateFlashcards, generateQuiz, isLoading, error } = useOpenAI();
 
@@ -122,12 +134,12 @@ const StudyMaterialManager = () => {
     if (!parsedContent) return;
 
     try {
-      const summaryText = await generateSummary(
+      const result = await generateSummary(
         parsedContent.text,
         learningStyle,
         summaryLength
       );
-      setSummary(summaryText);
+      setSummary(result.summary, result.insights, result.studyPath, result.ttsOptimizedText);
       setCurrentSection('summary');
       
       toast({
@@ -162,8 +174,12 @@ const StudyMaterialManager = () => {
         page_length: summaryLength === 'short' ? 1 : summaryLength === 'medium' ? 2 : 3,
         youtube_links: youtubeLinks,
         article_links: articleLinks,
-        references: {
+        reference_links: {
           summary_keywords: extractKeywords(summary),
+          insights: insights,
+          summary_length: summaryLength,
+          study_path: studyPath,
+          tts_optimized_text: ttsOptimizedText,
           generated_at: new Date().toISOString(),
         },
       });
@@ -251,17 +267,120 @@ const StudyMaterialManager = () => {
     }
   };
 
-  const handleListenSummary = () => {
-    if (!summary) return;
+  // Enhanced audio handler that uses TTS-optimized text when available
+  const handleListenSummary = (textToRead?: string) => {
+    // Use TTS-optimized text if available and provided, otherwise fall back to regular summary
+    const textForAudio = textToRead || (learningStyle === 'auditory' && ttsOptimizedText) || summary;
     
-    const utterance = new SpeechSynthesisUtterance(summary);
+    if (!textForAudio) return;
+    
+    // If already playing, pause it
+    if (isPlayingAudio) {
+      window.speechSynthesis.pause();
+      setIsPlayingAudio(false);
+      if (audioProgressIntervalRef.current) {
+        clearInterval(audioProgressIntervalRef.current);
+      }
+      return;
+    }
+    
+    // If paused, resume from where we left off
+    if (window.speechSynthesis.paused && utteranceRef.current) {
+      window.speechSynthesis.resume();
+      setIsPlayingAudio(true);
+      // Restart progress tracking
+      let progress = audioProgress;
+      const estimatedDuration = (textForAudio.length / 150) * 1000;
+      const interval = 100;
+      audioProgressIntervalRef.current = setInterval(() => {
+        progress += (interval / estimatedDuration) * 100;
+        if (progress >= 100) {
+          progress = 100;
+          if (audioProgressIntervalRef.current) {
+            clearInterval(audioProgressIntervalRef.current);
+          }
+        }
+        setAudioProgress(Math.min(progress, 100));
+      }, interval);
+      return;
+    }
+    
+    // Clear any existing speech before starting new
+    window.speechSynthesis.cancel();
+    
+    // Start new playback
+    const utterance = new SpeechSynthesisUtterance(textForAudio);
     utterance.lang = 'en-US';
     utterance.rate = 0.9;
     utterance.pitch = 1;
+    
+    utterance.onend = () => {
+      setIsPlayingAudio(false);
+      setAudioProgress(100);
+      if (audioProgressIntervalRef.current) {
+        clearInterval(audioProgressIntervalRef.current);
+      }
+      utteranceRef.current = null;
+    };
+    
+    utterance.onerror = () => {
+      setIsPlayingAudio(false);
+      if (audioProgressIntervalRef.current) {
+        clearInterval(audioProgressIntervalRef.current);
+      }
+      utteranceRef.current = null;
+    };
+    
+    utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
+    setIsPlayingAudio(true);
+    
+    // Simple progress simulation (since SpeechSynthesis doesn't provide direct progress)
+    let progress = 0;
+    const estimatedDuration = (textForAudio.length / 150) * 1000; // Rough estimate: 150 words per minute
+    const interval = 100; // Update every 100ms
+    
+    audioProgressIntervalRef.current = setInterval(() => {
+      progress += (interval / estimatedDuration) * 100;
+      if (progress >= 100) {
+        progress = 100;
+        if (audioProgressIntervalRef.current) {
+          clearInterval(audioProgressIntervalRef.current);
+        }
+      }
+      setAudioProgress(Math.min(progress, 100));
+    }, interval);
   };
 
+  const handlePauseAudio = () => {
+    window.speechSynthesis.pause();
+    setIsPlayingAudio(false);
+    if (audioProgressIntervalRef.current) {
+      clearInterval(audioProgressIntervalRef.current);
+    }
+  };
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (audioProgressIntervalRef.current) {
+        clearInterval(audioProgressIntervalRef.current);
+      }
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
   const handleReset = () => {
+    // Stop audio if playing
+    if (isPlayingAudio) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+      if (audioProgressIntervalRef.current) {
+        clearInterval(audioProgressIntervalRef.current);
+      }
+      setAudioProgress(0);
+      utteranceRef.current = null;
+    }
     setLocalFile(null);
     setParsedContent(null);
     clearSession();
@@ -411,7 +530,15 @@ const StudyMaterialManager = () => {
             exit={{ opacity: 0, y: -20 }}
           >
             <div className="space-y-6">
-              <ParsedSummary summary={summary} />
+              <ParsedSummary 
+                summary={summary} 
+                insights={insights}
+                studyPath={studyPath}
+                ttsOptimizedText={ttsOptimizedText}
+                onPlayAudio={handleListenSummary}
+                onPauseAudio={handlePauseAudio}
+                isPlaying={isPlayingAudio}
+              />
               
               {/* Action Buttons */}
               <Card className="border-2 border-primary/20">
@@ -426,11 +553,34 @@ const StudyMaterialManager = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                    {learningStyle === 'auditory' && summary && (
-                      <Button variant="outline" onClick={handleListenSummary} className="w-full">
-                        <Headphones className="h-4 w-4 mr-2" />
-                        Listen to Summary
-                      </Button>
+                    {summary && learningStyle === 'auditory' && (
+                      <div className="w-full">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => handleListenSummary()} 
+                          className="w-full"
+                        >
+                          {isPlayingAudio ? (
+                            <>
+                              <Pause className="h-4 w-4 mr-2" />
+                              Pause Audio
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4 mr-2" />
+                              Listen to Summary
+                            </>
+                          )}
+                        </Button>
+                        {isPlayingAudio && (
+                          <div className="mt-2">
+                            <Progress value={audioProgress} className="h-2" />
+                            <p className="text-xs text-muted-foreground mt-1 text-center">
+                              {Math.round(audioProgress)}% complete
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     )}
                     <Button
                       variant="default"
@@ -495,7 +645,7 @@ const StudyMaterialManager = () => {
           animate={{ opacity: 1, y: 0 }}
         >
           <QuizRenderer
-            questions={quizQuestions}
+            questions={quizQuestions as any}
             materialName={parsedContent?.fileName || 'Study Material'}
           />
         </motion.div>

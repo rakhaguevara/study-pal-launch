@@ -126,7 +126,13 @@ const Settings = () => {
         .update(updateData)
         .eq("id", profile.id);
 
-      if (error) throw error;
+      if (error) {
+        // Handle 401 Unauthorized specifically
+        if (error.code === 'PGRST301' || error.message.includes('401') || error.message.includes('Unauthorized')) {
+          throw new Error('Authentication failed. Please log out and log back in.');
+        }
+        throw error;
+      }
 
       // Update local state
       setProfile({ ...profile, [field]: editing.value } as UserProfile);
@@ -136,11 +142,22 @@ const Settings = () => {
         title: "✅ Profile updated successfully!",
         description: `Your ${field} has been updated`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error);
+      
+      let errorMessage = "Failed to update profile. Please try again.";
+      
+      if (error.message.includes('Authentication failed')) {
+        errorMessage = "Authentication failed. Please log out and log back in.";
+      } else if (error.message.includes('Unauthorized')) {
+        errorMessage = "You don't have permission to update this profile.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Update Failed",
-        description: "Failed to update profile. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -247,7 +264,20 @@ const Settings = () => {
           upsert: true,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        // Check for bucket not found error
+        const errorMsg = (uploadError.message || '').toLowerCase();
+        const errorCode = String((uploadError as any).statusCode || (uploadError as any).code || '');
+        
+        if (errorMsg.includes('not found') || 
+            errorMsg.includes('bucket') ||
+            errorMsg.includes('does not exist') ||
+            errorCode === '404' ||
+            errorCode === '404 Not Found') {
+          throw new Error('BUCKET_NOT_FOUND');
+        }
+        throw uploadError;
+      }
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
@@ -271,11 +301,34 @@ const Settings = () => {
       });
     } catch (error: any) {
       console.error("Error uploading avatar:", error);
-      toast({
-        title: "Upload Failed",
-        description: "Failed to upload avatar. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Show specific error message for bucket not found
+      const errorMsg = (error?.message || '').toLowerCase();
+      const errorCode = error?.code || error?.statusCode || '';
+      
+      if (errorMsg.includes('bucket not found') || 
+          errorMsg.includes('not found') || 
+          errorMsg.includes('bucket') ||
+          errorMsg === 'bucket_not_found' ||
+          errorCode === '404' ||
+          error?.message === 'BUCKET_NOT_FOUND') {
+        // Open dashboard in new tab automatically
+        const dashboardUrl = "https://supabase.com/dashboard/project/tugqiaqepvaqnnrairax/storage/buckets";
+        window.open(dashboardUrl, '_blank');
+        
+        toast({
+          title: "❌ Storage Bucket Belum Dibuat",
+          description: "Bucket 'avatars' belum dibuat di Supabase Storage. Dashboard Supabase telah dibuka di tab baru. Silakan buat bucket dengan: Nama 'avatars' (huruf kecil), centang 'Public bucket', lalu refresh halaman ini.",
+          variant: "destructive",
+          duration: 15000,
+        });
+      } else {
+        toast({
+          title: "Upload Failed",
+          description: error?.message || "Failed to upload avatar. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsUploadingAvatar(false);
       // Reset file input

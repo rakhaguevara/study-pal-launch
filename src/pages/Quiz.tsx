@@ -237,6 +237,78 @@ const Quiz = () => {
     }
   };
 
+  // Fallback function to save quiz results directly to database
+  const saveQuizResultsDirectly = async (currentUser: any, timeTaken: number) => {
+    // Get user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('firebase_uid', currentUser.uid)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error('User profile not found. Please complete your profile first.');
+    }
+
+    // Determine quiz level based on age
+    let quizLevel: 'beginner' | 'intermediate' | 'advanced' = 'intermediate';
+    if (userAge < 14) quizLevel = 'beginner';
+    else if (userAge >= 20) quizLevel = 'advanced';
+
+    // Calculate total score
+    const totalScore = scores.visual + scores.auditory + scores.reading_writing + scores.kinesthetic;
+
+    // Determine dominant learning style
+    const scoreMap = {
+      visual: scores.visual,
+      auditory: scores.auditory,
+      reading_writing: scores.reading_writing,
+      kinesthetic: scores.kinesthetic
+    };
+
+    const dominantStyle = Object.entries(scoreMap)
+      .sort(([, a], [, b]) => b - a)[0][0] as 'visual' | 'auditory' | 'reading_writing' | 'kinesthetic';
+
+    // Insert quiz result
+    const { data: quizResult, error: quizError } = await supabase
+      .from('quiz_results')
+      .insert({
+        user_id: profile.id,
+        visual_score: scores.visual,
+        audio_score: scores.auditory,
+        text_score: scores.reading_writing,
+        kinesthetic_score: scores.kinesthetic,
+        total_score: totalScore,
+        quiz_level: quizLevel,
+        time_taken: timeTaken
+      })
+      .select()
+      .single();
+
+    if (quizError) {
+      throw new Error(`Failed to save quiz result: ${quizError.message}`);
+    }
+
+    // Update user profile with learning style
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({
+        learning_style: dominantStyle,
+        quiz_completed: true
+      })
+      .eq('id', profile.id);
+
+    if (updateError) {
+      console.warn('Failed to update user profile:', updateError);
+      // Don't throw here, quiz result is already saved
+    }
+
+    return {
+      learningStyle: dominantStyle,
+      quizResult: quizResult
+    };
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     
@@ -254,20 +326,38 @@ const Quiz = () => {
       }
 
       const timeTaken = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      let data: any;
+      let useFallback = false;
 
-      const { data, error } = await supabase.functions.invoke('process-quiz', {
-        body: {
-          userId: currentUser.uid,
-          visualScore: scores.visual,
-          audioScore: scores.auditory,
-          textScore: scores.reading_writing,
-          kinestheticScore: scores.kinesthetic,
-          timeTaken: timeTaken,
-          age: userAge,
-        },
-      });
+      // Try to use Edge Function first
+      try {
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('process-quiz', {
+          body: {
+            userId: currentUser.uid,
+            visualScore: scores.visual,
+            audioScore: scores.auditory,
+            textScore: scores.reading_writing,
+            kinestheticScore: scores.kinesthetic,
+            timeTaken: timeTaken,
+            age: userAge,
+          },
+        });
 
-      if (error) throw error;
+        if (functionError) {
+          console.warn('Edge Function failed, using fallback:', functionError);
+          useFallback = true;
+        } else {
+          data = functionData;
+        }
+      } catch (functionError: any) {
+        console.warn('Edge Function not available, using fallback:', functionError);
+        useFallback = true;
+      }
+
+      // Use fallback if Edge Function failed
+      if (useFallback) {
+        data = await saveQuizResultsDirectly(currentUser, timeTaken);
+      }
 
       // Sync quiz results to profile for AI recommendations
       await syncQuizResultToProfile(currentUser.uid, {

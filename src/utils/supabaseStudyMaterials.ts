@@ -10,7 +10,7 @@ export interface StudyMaterial {
   learning_style: 'visual' | 'auditory' | 'reading_writing' | 'kinesthetic';
   youtube_links?: string[];
   article_links?: string[];
-  references?: Record<string, any>;
+  reference_links?: Record<string, any>;
   page_length?: number;
   created_at?: string;
   updated_at?: string;

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS public.study_materials (
   learning_style learning_style NOT NULL,
   youtube_links TEXT[] DEFAULT '{}',
   article_links TEXT[] DEFAULT '{}',
-  references JSONB DEFAULT '{}',
+  reference_links JSONB DEFAULT '{}',
   page_length INTEGER DEFAULT 2,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -77,6 +77,6 @@ CREATE TRIGGER update_study_materials_updated_at
 COMMENT ON TABLE public.study_materials IS 'Stores AI-generated study materials with references and links';
 COMMENT ON COLUMN public.study_materials.youtube_links IS 'Array of YouTube video URLs related to the material';
 COMMENT ON COLUMN public.study_materials.article_links IS 'Array of article URLs from various sources';
-COMMENT ON COLUMN public.study_materials.references IS 'JSONB object containing metadata for references';
+COMMENT ON COLUMN public.study_materials.reference_links IS 'JSONB object containing metadata for references';
 COMMENT ON COLUMN public.study_materials.page_length IS 'Number of pages/paragraphs for the generated summary';
 

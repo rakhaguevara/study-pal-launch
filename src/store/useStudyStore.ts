@@ -29,6 +29,9 @@ interface StudyState {
   
   // AI generated content
   summary: string;
+  insights: string[];
+  studyPath?: string; // Suggested study path for kinesthetic learners
+  ttsOptimizedText?: string; // TTS-optimized version for auditory learners
   flashcards: Flashcard[];
   quizQuestions: QuizQuestion[];
   
@@ -39,7 +42,7 @@ interface StudyState {
   setUserId: (userId: string | null) => void;
   setLearningStyle: (style: LearningStyle) => void;
   setUploadedFile: (file: File | null, content: string) => void;
-  setSummary: (summary: string) => void;
+  setSummary: (summary: string, insights?: string[], studyPath?: string, ttsOptimizedText?: string) => void;
   setFlashcards: (flashcards: Flashcard[]) => void;
   setQuizQuestions: (questions: QuizQuestion[]) => void;
   setCurrentSection: (section: StudyState['currentSection']) => void;
@@ -58,6 +61,9 @@ export const useStudyStore = create<StudyState>()(
       uploadedFileName: '',
       fileContent: '',
       summary: '',
+      insights: [],
+      studyPath: undefined,
+      ttsOptimizedText: undefined,
       flashcards: [],
       quizQuestions: [],
       currentSection: null,
@@ -75,8 +81,8 @@ export const useStudyStore = create<StudyState>()(
           fileContent: content 
         }),
       
-      setSummary: (summary) => 
-        set({ summary }),
+      setSummary: (summary, insights = [], studyPath, ttsOptimizedText) => 
+        set({ summary, insights, studyPath, ttsOptimizedText }),
       
       setFlashcards: (flashcards) => 
         set({ flashcards }),
@@ -93,6 +99,9 @@ export const useStudyStore = create<StudyState>()(
           uploadedFileName: '',
           fileContent: '',
           summary: '',
+          insights: [],
+          studyPath: undefined,
+          ttsOptimizedText: undefined,
           flashcards: [],
           quizQuestions: [],
           currentSection: null,
@@ -107,6 +116,9 @@ export const useStudyStore = create<StudyState>()(
         uploadedFileName: state.uploadedFileName,
         fileContent: state.fileContent,
         summary: state.summary,
+        insights: state.insights,
+        studyPath: state.studyPath,
+        ttsOptimizedText: state.ttsOptimizedText,
         flashcards: state.flashcards,
         quizQuestions: state.quizQuestions,
         currentSection: state.currentSection,
