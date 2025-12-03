@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      flashcards: {
+        Row: {
+          id: string
+          user_id: string
+          material_id: string
+          front: string
+          back: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          material_id: string
+          front: string
+          back: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          material_id?: string
+          front?: string
+          back?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       focus_sessions: {
         Row: {
           created_at: string | null
@@ -131,6 +161,150 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      study_materials: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          content: string | null
+          summary: string | null
+          learning_style: Database["public"]["Enums"]["learning_style"]
+          youtube_links: string[] | null
+          article_links: string[] | null
+          reference_links: Json | null
+          page_length: number | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          content?: string | null
+          summary?: string | null
+          learning_style: Database["public"]["Enums"]["learning_style"]
+          youtube_links?: string[] | null
+          article_links?: string[] | null
+          reference_links?: Json | null
+          page_length?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          content?: string | null
+          summary?: string | null
+          learning_style?: Database["public"]["Enums"]["learning_style"]
+          youtube_links?: string[] | null
+          article_links?: string[] | null
+          reference_links?: Json | null
+          page_length?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_user"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_time: string
+          id: string
+          source: "google" | "manual"
+          start_time: string
+          subject: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_time: string
+          id?: string
+          source?: "google" | "manual"
+          start_time: string
+          subject?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_time?: string
+          id?: string
+          source?: "google" | "manual"
+          start_time?: string
+          subject?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string
+          id: string
+          refresh_token: string | null
+          scope: string | null
+          token_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          refresh_token?: string | null
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          refresh_token?: string | null
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_profiles: {
         Row: {

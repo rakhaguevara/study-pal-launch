@@ -1,20 +1,18 @@
+/**
+ * Supabase Study Materials Utilities
+ * 
+ * Re-exports from the main helper file and provides additional utilities.
+ * Uses Firebase UID directly - no user_profiles dependency.
+ */
 import { supabase } from '@/integrations/supabase/client';
 import { auth } from '@/lib/firebase';
 
-export interface StudyMaterial {
-  id?: string;
-  user_id?: string;
-  title: string;
-  content?: string;
-  summary: string;
-  learning_style: 'visual' | 'auditory' | 'reading_writing' | 'kinesthetic';
-  youtube_links?: string[];
-  article_links?: string[];
-  reference_links?: Record<string, any>;
-  page_length?: number;
-  created_at?: string;
-  updated_at?: string;
-}
+// Re-export everything from the main helper
+export * from '@/lib/supabaseStudyMaterials';
+
+// ============================================
+// Additional Types
+// ============================================
 
 export interface FlashcardData {
   user_id: string;
@@ -32,209 +30,160 @@ export interface QuizData {
   date_taken: string;
 }
 
+// ============================================
+// Helper Functions
+// ============================================
+
 /**
- * Get user profile ID from Firebase UID
+ * Get current Firebase user ID.
+ * Returns the Firebase UID directly, no user_profiles lookup needed.
  */
 export const getUserProfileId = async (): Promise<string | null> => {
   const user = auth.currentUser;
-  if (!user) return null;
-
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('id')
-    .eq('firebase_uid', user.uid)
-    .single();
-
-  if (error || !data) {
-    console.error('Error fetching user profile:', error);
+  if (!user) {
+    console.warn('[getUserProfileId] No authenticated user');
     return null;
   }
+  // Return Firebase UID directly - no need to look up user_profiles
+  return user.uid;
+};
 
-  return data.id;
+// ============================================
+// Flashcard Operations
+// ============================================
+
+/**
+ * Save flashcards to Supabase.
+ */
+export const saveFlashcards = async (
+  flashcards: Array<{ front: string; back: string }>,
+  materialName: string
+): Promise<boolean> => {
+  const user = auth.currentUser;
+  if (!user) {
+    console.error('[saveFlashcards] No authenticated user');
+    return false;
+  }
+
+  try {
+    const flashcardsToInsert = flashcards.map(card => ({
+      user_id: user.uid,
+      material_id: materialName,
+      front: card.front,
+      back: card.back,
+    }));
+
+    const { error } = await supabase
+      .from('flashcards')
+      .insert(flashcardsToInsert);
+
+    if (error) {
+      console.error('[saveFlashcards] error:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[saveFlashcards] catch:', error);
+    return false;
+  }
 };
 
 /**
- * Save a study material to Supabase
+ * Fetch flashcards for a specific material.
  */
-export const saveStudyMaterial = async (material: Omit<StudyMaterial, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<string | null> => {
-  const userProfileId = await getUserProfileId();
-  if (!userProfileId) {
-    console.error('User profile not found');
-    return null;
-  }
+export const getFlashcards = async (materialId: string): Promise<FlashcardData[]> => {
+  const user = auth.currentUser;
+  if (!user) return [];
 
-  const { data, error } = await supabase
-    .from('study_materials')
-    .insert({
-      ...material,
-      user_id: userProfileId,
-    })
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('flashcards')
+      .select('*')
+      .eq('user_id', user.uid)
+      .eq('material_id', materialId);
 
-  if (error) {
-    console.error('Error saving study material:', error);
-    return null;
-  }
+    if (error) {
+      console.error('[getFlashcards] error:', error);
+      return [];
+    }
 
-  return data.id;
-};
-
-/**
- * Get all study materials for the current user
- */
-export const getStudyMaterials = async (): Promise<StudyMaterial[]> => {
-  const userProfileId = await getUserProfileId();
-  if (!userProfileId) return [];
-
-  const { data, error } = await supabase
-    .from('study_materials')
-    .select('*')
-    .eq('user_id', userProfileId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching study materials:', error);
+    return data ?? [];
+  } catch (error) {
+    console.error('[getFlashcards] catch:', error);
     return [];
   }
-
-  return data || [];
 };
 
-/**
- * Get a specific study material by ID
- */
-export const getStudyMaterial = async (id: string): Promise<StudyMaterial | null> => {
-  const { data, error } = await supabase
-    .from('study_materials')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    console.error('Error fetching study material:', error);
-    return null;
-  }
-
-  return data;
-};
+// ============================================
+// Quiz Operations
+// ============================================
 
 /**
- * Update a study material
- */
-export const updateStudyMaterial = async (id: string, updates: Partial<StudyMaterial>): Promise<boolean> => {
-  const { error } = await supabase
-    .from('study_materials')
-    .update(updates)
-    .eq('id', id);
-
-  if (error) {
-    console.error('Error updating study material:', error);
-    return false;
-  }
-
-  return true;
-};
-
-/**
- * Delete a study material
- */
-export const deleteStudyMaterial = async (id: string): Promise<boolean> => {
-  const { error } = await supabase
-    .from('study_materials')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error('Error deleting study material:', error);
-    return false;
-  }
-
-  return true;
-};
-
-/**
- * Save flashcards to Supabase
- */
-export const saveFlashcards = async (flashcards: Array<{ front: string; back: string }>, materialName: string): Promise<boolean> => {
-  const userProfileId = await getUserProfileId();
-  if (!userProfileId) return false;
-
-  const user = auth.currentUser;
-  if (!user) return false;
-
-  const flashcardsToInsert = flashcards.map(card => ({
-    user_id: user.uid,
-    material_id: materialName,
-    front: card.front,
-    back: card.back,
-  }));
-
-  const { error } = await supabase
-    .from('flashcards')
-    .insert(flashcardsToInsert);
-
-  if (error) {
-    console.error('Error saving flashcards:', error);
-    return false;
-  }
-
-  return true;
-};
-
-/**
- * Save quiz result to Supabase
+ * Save quiz result to Supabase.
  */
 export const saveQuizResult = async (quizData: QuizData): Promise<boolean> => {
-  const userProfileId = await getUserProfileId();
-  if (!userProfileId) return false;
-
-  const { error } = await supabase
-    .from('quiz_results')
-    .insert({
-      user_id: userProfileId,
-      material_name: quizData.material_name,
-      total_questions: quizData.total_questions,
-      correct_answers: quizData.correct_answers,
-      score_percent: quizData.score_percent,
-      learning_style: quizData.learning_style,
-      date_taken: quizData.date_taken,
-    });
-
-  if (error) {
-    console.error('Error saving quiz result:', error);
+  const user = auth.currentUser;
+  if (!user) {
+    console.error('[saveQuizResult] No authenticated user');
     return false;
   }
 
-  return true;
+  try {
+    const { error } = await supabase
+      .from('quiz_results')
+      .insert({
+        user_id: user.uid,
+        material_name: quizData.material_name,
+        total_questions: quizData.total_questions,
+        correct_answers: quizData.correct_answers,
+        score_percent: quizData.score_percent,
+        learning_style: quizData.learning_style,
+        date_taken: quizData.date_taken,
+      });
+
+    if (error) {
+      console.error('[saveQuizResult] error:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[saveQuizResult] catch:', error);
+    return false;
+  }
 };
 
+// ============================================
+// Session Cache Utilities
+// ============================================
+
 /**
- * Cache data to sessionStorage for faster access
+ * Cache data to sessionStorage for faster access.
  */
 export const cacheToSession = (key: string, data: any): void => {
   try {
     sessionStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
-    console.error('Error caching to sessionStorage:', error);
+    console.error('[cacheToSession] error:', error);
   }
 };
 
 /**
- * Get cached data from sessionStorage
+ * Get cached data from sessionStorage.
  */
 export const getFromSession = <T>(key: string): T | null => {
   try {
     const data = sessionStorage.getItem(key);
     return data ? JSON.parse(data) : null;
   } catch (error) {
-    console.error('Error reading from sessionStorage:', error);
+    console.error('[getFromSession] error:', error);
     return null;
   }
 };
 
 /**
- * Get or create material reference from cache or fresh fetch
+ * Get data from cache or fetch fresh.
  */
 export const getCachedOrFresh = async <T>(
   cacheKey: string,
@@ -256,4 +205,3 @@ export const getCachedOrFresh = async <T>(
 
   return fresh;
 };
-

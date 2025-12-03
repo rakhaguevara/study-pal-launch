@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -155,10 +155,10 @@ const StudyMaterialManager = () => {
     }
   };
 
-  const handleReferencesReady = (youtube: string[], articles: string[]) => {
+  const handleReferencesReady = useCallback((youtube: string[], articles: string[]) => {
     setYoutubeLinks(youtube);
     setArticleLinks(articles);
-  };
+  }, []);
 
   const handleSaveSummary = async () => {
     if (!summary || !user) return;
@@ -388,27 +388,27 @@ const StudyMaterialManager = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header - responsive layout */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-foreground">📚 Study Materials</h2>
-          <p className="text-muted-foreground mt-1">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">📚 Study Materials</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Upload your materials • Style: <span className="font-semibold capitalize">{learningStyle}</span>
           </p>
         </div>
         {(uploadedFileName || summary) && (
-          <Button variant="outline" onClick={handleReset}>
+          <Button variant="outline" onClick={handleReset} size="sm" className="self-start sm:self-auto">
             <X className="h-4 w-4 mr-2" />
             Reset
           </Button>
         )}
       </div>
 
-      {/* File Upload Zone */}
+      {/* File Upload Zone - responsive padding */}
       {!uploadedFileName && (
         <Card className="border-2 border-dashed border-primary/50 hover:border-primary transition-colors">
-          <CardContent className="p-12">
+          <CardContent className="p-6 sm:p-8 lg:p-12">
             <div
               {...getRootProps()}
               className={`text-center cursor-pointer transition-all ${
@@ -416,18 +416,18 @@ const StudyMaterialManager = () => {
               }`}
             >
               <input {...getInputProps()} />
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-orange-500 flex items-center justify-center rounded-full">
-                  <Upload className="h-10 w-10 text-white" />
+              <div className="flex flex-col items-center gap-3 sm:gap-4">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full bg-gradient-to-r from-blue-500 to-orange-500 flex items-center justify-center">
+                  <Upload className="h-7 w-7 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-white" />
                 </div>
                 <div>
-                  <p className="text-lg font-semibold text-foreground">
+                  <p className="text-sm sm:text-base lg:text-lg font-semibold text-foreground">
                     {isDragActive ? 'Drop your file here' : 'Drag & drop your study material'}
                   </p>
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
                     PDF, PPT, PPTX, or TXT files (max 10MB)
                   </p>
-                  <Button variant="outline" className="mt-4">
+                  <Button variant="outline" className="mt-3 sm:mt-4 text-xs sm:text-sm">
                     Browse Files
                   </Button>
                 </div>
@@ -540,42 +540,42 @@ const StudyMaterialManager = () => {
                 isPlaying={isPlayingAudio}
               />
               
-              {/* Action Buttons */}
+              {/* Action Buttons - responsive grid */}
               <Card className="border-2 border-primary/20">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Sparkles className="h-5 w-5" />
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
                     Additional Learning Tools
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">
                     Generate flashcards, quizzes, or listen to the summary
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-2 sm:mb-3">
                     {summary && learningStyle === 'auditory' && (
                       <div className="w-full">
                         <Button 
                           variant="outline" 
                           onClick={() => handleListenSummary()} 
-                          className="w-full"
+                          className="w-full text-xs sm:text-sm h-9 sm:h-10"
                         >
                           {isPlayingAudio ? (
                             <>
-                              <Pause className="h-4 w-4 mr-2" />
+                              <Pause className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                               Pause Audio
                             </>
                           ) : (
                             <>
-                              <Play className="h-4 w-4 mr-2" />
+                              <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                               Listen to Summary
                             </>
                           )}
                         </Button>
                         {isPlayingAudio && (
                           <div className="mt-2">
-                            <Progress value={audioProgress} className="h-2" />
-                            <p className="text-xs text-muted-foreground mt-1 text-center">
+                            <Progress value={audioProgress} className="h-1.5 sm:h-2" />
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 text-center">
                               {Math.round(audioProgress)}% complete
                             </p>
                           </div>
@@ -586,38 +586,38 @@ const StudyMaterialManager = () => {
                       variant="default"
                       onClick={handleSaveSummary}
                       disabled={isSaving}
-                      className="w-full bg-green-600 hover:bg-green-700"
+                      className="w-full bg-green-600 hover:bg-green-700 text-xs sm:text-sm h-9 sm:h-10"
                     >
                       {isSaving ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
                           Saving...
                         </>
                       ) : (
                         <>
-                          <BookOpen className="h-4 w-4 mr-2" />
+                          <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                           Save Summary
                         </>
                       )}
                     </Button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                     <Button
                       variant="outline"
                       onClick={handleGenerateFlashcards}
                       disabled={isLoading || flashcards.length > 0}
-                      className="w-full"
+                      className="w-full text-xs sm:text-sm h-9 sm:h-10"
                     >
-                      <GraduationCap className="h-4 w-4 mr-2" />
+                      <GraduationCap className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                       {flashcards.length > 0 ? 'Flashcards Ready ✓' : 'Generate Flashcards'}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={handleGenerateQuiz}
                       disabled={isLoading || quizQuestions.length > 0}
-                      className="w-full"
+                      className="w-full text-xs sm:text-sm h-9 sm:h-10"
                     >
-                      <Sparkles className="h-4 w-4 mr-2" />
+                      <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                       {quizQuestions.length > 0 ? 'Quiz Ready ✓' : 'Generate Quiz'}
                     </Button>
                   </div>

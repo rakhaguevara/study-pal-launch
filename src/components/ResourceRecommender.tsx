@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExternalLink, Youtube, BookOpen, FileText, ArrowRight, CheckCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,10 +53,13 @@ const ResourceRecommender = ({ summary, materialName, onReferencesReady }: Resou
   const [progress, setProgress] = useState<LearningProgress | null>(null);
   const [completedResources, setCompletedResources] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'youtube' | 'articles'>('youtube');
+  
+  // Track if we've already notified parent to prevent loops
+  const hasNotifiedRef = useRef(false);
+  const previousRefsRef = useRef<{ youtube: string[]; articles: string[] }>({ youtube: [], articles: [] });
 
   // Extract topic keywords from summary
-  const extractTopicKeywords = (text: string): string[] => {
-    // Simple keyword extraction - can be enhanced with NLP
+  const extractTopicKeywords = useCallback((text: string): string[] => {
     const keywords: string[] = [];
     const commonTopics = ['docker', 'react', 'javascript', 'python', 'kubernetes', 'git', 'node', 'api', 'database', 'cloud'];
     
@@ -66,122 +69,11 @@ const ResourceRecommender = ({ summary, materialName, onReferencesReady }: Resou
       }
     });
     
-    return keywords.slice(0, 3); // Get top 3 keywords
-  };
-
-  // Load progress from localStorage
-  useEffect(() => {
-    if (user) {
-      const savedProgress = localStorage.getItem(`learning-progress-${user.uid}`);
-      if (savedProgress) {
-        try {
-          const parsed = JSON.parse(savedProgress);
-          const topicProgress = parsed[materialName] as LearningProgress;
-          if (topicProgress) {
-            setProgress(topicProgress);
-            setCompletedResources(topicProgress.completedResources || []);
-          }
-        } catch (e) {
-          console.error('Failed to load progress:', e);
-        }
-      }
-    }
-  }, [user, materialName]);
-
-  // Fetch YouTube resources
-  const fetchYouTubeResources = async (keywords: string[]) => {
-    if (!keywords.length) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const searchQuery = keywords.join(' ');
-      const response = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=8&q=${encodeURIComponent(searchQuery)}&type=video&key=${YOUTUBE_API_KEY}`
-      );
-
-      if (!response.ok) throw new Error('YouTube API failed');
-
-      const data = await response.json();
-      const resources: YouTubeResource[] = data.items.map((item: any) => ({
-        id: item.id.videoId,
-        title: item.snippet.title,
-        url: `https://youtube.com/watch?v=${item.id.videoId}`,
-        description: item.snippet.description,
-        thumbnail: item.snippet.thumbnails.medium.url,
-        channelName: item.snippet.channelTitle,
-      }));
-
-      setYoutubeResources(resources);
-    } catch (error) {
-      console.error('Failed to fetch YouTube resources:', error);
-      // Fallback mock data
-      setYoutubeResources(generateMockYouTubeResources());
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch article resources (mock implementation - replace with real API)
-  const fetchArticleResources = async (keywords: string[]) => {
-    if (!keywords.length) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // Mock implementation - replace with real APIs (CrossRef, Semantic Scholar, etc.)
-      const articles: ArticleResource[] = [
-        {
-          id: 'article-1',
-          title: `Understanding ${keywords[0] || 'Modern Technologies'}`,
-          url: 'https://example.com/article-1',
-          authors: ['Dr. Jane Smith', 'Dr. John Doe'],
-          source: 'Tech Journal',
-          description: 'Comprehensive guide on the topic with practical examples',
-          publishDate: '2024-01-15',
-        },
-        {
-          id: 'article-2',
-          title: `${keywords[0] || 'Technology'} Best Practices`,
-          url: 'https://example.com/article-2',
-          authors: ['Tech Expert'],
-          source: 'Developer Blog',
-          description: 'Industry best practices and advanced techniques',
-          publishDate: '2024-02-10',
-        },
-        {
-          id: 'article-3',
-          title: `Research: ${keywords[0] || 'Technology'} Trends`,
-          url: 'https://example.com/article-3',
-          authors: ['Research Team'],
-          source: 'Academic Journal',
-          description: 'Latest research and findings in the field',
-          publishDate: '2024-03-05',
-        },
-        {
-          id: 'article-4',
-          title: `Hands-On Guide to ${keywords[0] || 'Technology'}`,
-          url: 'https://example.com/article-4',
-          authors: ['Practical Learning'],
-          source: 'Learning Platform',
-          description: 'Step-by-step tutorial for practical learning',
-          publishDate: '2024-04-01',
-        },
-      ];
-
-      setArticleResources(articles);
-    } catch (error) {
-      console.error('Failed to fetch article resources:', error);
-      setArticleResources([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    return keywords.slice(0, 3);
+  }, []);
 
   // Generate mock YouTube resources (fallback)
-  const generateMockYouTubeResources = (): YouTubeResource[] => [
+  const generateMockYouTubeResources = useCallback((): YouTubeResource[] => [
     {
       id: '1',
       title: 'Complete Introduction to the Topic',
@@ -206,31 +98,167 @@ const ResourceRecommender = ({ summary, materialName, onReferencesReady }: Resou
       thumbnail: 'https://via.placeholder.com/320x180?text=Video+Thumbnail',
       channelName: 'Practical Skills',
     },
-  ];
+  ], []);
 
-  // Extract keywords and fetch resources
+  // Load progress from localStorage
   useEffect(() => {
-    const keywords = extractTopicKeywords(summary);
-    
-    if (keywords.length > 0) {
-      setIsLoading(true);
-      fetchYouTubeResources(keywords);
-      fetchArticleResources(keywords);
-    } else {
-      setIsLoading(false);
-      setYoutubeResources(generateMockYouTubeResources());
+    if (user) {
+      const savedProgress = localStorage.getItem(`learning-progress-${user.uid}`);
+      if (savedProgress) {
+        try {
+          const parsed = JSON.parse(savedProgress);
+          const topicProgress = parsed[materialName] as LearningProgress;
+          if (topicProgress) {
+            setProgress(topicProgress);
+            setCompletedResources(topicProgress.completedResources || []);
+          }
+        } catch (e) {
+          console.error('Failed to load progress:', e);
+        }
+      }
     }
-  }, [summary]);
+  }, [user, materialName]);
 
-  // Notify parent when references are ready
+  // Fetch YouTube resources
+  const fetchYouTubeResources = useCallback(async (keywords: string[]) => {
+    if (!keywords.length) {
+      return generateMockYouTubeResources();
+    }
+
+    try {
+      const searchQuery = keywords.join(' ');
+      const response = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=8&q=${encodeURIComponent(searchQuery)}&type=video&key=${YOUTUBE_API_KEY}`
+      );
+
+      if (!response.ok) throw new Error('YouTube API failed');
+
+      const data = await response.json();
+      const resources: YouTubeResource[] = data.items.map((item: any) => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        url: `https://youtube.com/watch?v=${item.id.videoId}`,
+        description: item.snippet.description,
+        thumbnail: item.snippet.thumbnails.medium.url,
+        channelName: item.snippet.channelTitle,
+      }));
+
+      return resources;
+    } catch (error) {
+      console.error('Failed to fetch YouTube resources:', error);
+      return generateMockYouTubeResources();
+    }
+  }, [generateMockYouTubeResources]);
+
+  // Fetch article resources (mock implementation - replace with real API)
+  const fetchArticleResources = useCallback(async (keywords: string[]): Promise<ArticleResource[]> => {
+    if (!keywords.length) {
+      return [];
+    }
+
+    // Mock implementation - replace with real APIs (CrossRef, Semantic Scholar, etc.)
+    return [
+      {
+        id: 'article-1',
+        title: `Understanding ${keywords[0] || 'Modern Technologies'}`,
+        url: 'https://example.com/article-1',
+        authors: ['Dr. Jane Smith', 'Dr. John Doe'],
+        source: 'Tech Journal',
+        description: 'Comprehensive guide on the topic with practical examples',
+        publishDate: '2024-01-15',
+      },
+      {
+        id: 'article-2',
+        title: `${keywords[0] || 'Technology'} Best Practices`,
+        url: 'https://example.com/article-2',
+        authors: ['Tech Expert'],
+        source: 'Developer Blog',
+        description: 'Industry best practices and advanced techniques',
+        publishDate: '2024-02-10',
+      },
+      {
+        id: 'article-3',
+        title: `Research: ${keywords[0] || 'Technology'} Trends`,
+        url: 'https://example.com/article-3',
+        authors: ['Research Team'],
+        source: 'Academic Journal',
+        description: 'Latest research and findings in the field',
+        publishDate: '2024-03-05',
+      },
+      {
+        id: 'article-4',
+        title: `Hands-On Guide to ${keywords[0] || 'Technology'}`,
+        url: 'https://example.com/article-4',
+        authors: ['Practical Learning'],
+        source: 'Learning Platform',
+        description: 'Step-by-step tutorial for practical learning',
+        publishDate: '2024-04-01',
+      },
+    ];
+  }, []);
+
+  // Main fetch effect - only runs when summary changes
   useEffect(() => {
-    if (onReferencesReady && (youtubeResources.length > 0 || articleResources.length > 0)) {
-      const youtubeUrls = youtubeResources.map(r => r.url);
-      const articleUrls = articleResources.map(r => r.url);
+    let isMounted = true;
+    hasNotifiedRef.current = false; // Reset notification flag on new fetch
+
+    const fetchResources = async () => {
+      const keywords = extractTopicKeywords(summary);
       
+      setIsLoading(true);
+      
+      try {
+        const [ytResources, artResources] = await Promise.all([
+          fetchYouTubeResources(keywords),
+          fetchArticleResources(keywords),
+        ]);
+
+        if (isMounted) {
+          setYoutubeResources(ytResources);
+          setArticleResources(artResources);
+        }
+      } catch (error) {
+        console.error('Error fetching resources:', error);
+        if (isMounted) {
+          setYoutubeResources(generateMockYouTubeResources());
+          setArticleResources([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchResources();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [summary, extractTopicKeywords, fetchYouTubeResources, fetchArticleResources, generateMockYouTubeResources]);
+
+  // Notify parent when references are ready - with proper change detection
+  useEffect(() => {
+    if (!onReferencesReady || isLoading) return;
+    
+    const youtubeUrls = youtubeResources.map(r => r.url);
+    const articleUrls = articleResources.map(r => r.url);
+    
+    // Check if the URLs have actually changed
+    const prevYoutube = previousRefsRef.current.youtube;
+    const prevArticles = previousRefsRef.current.articles;
+    
+    const youtubeChanged = youtubeUrls.length !== prevYoutube.length || 
+      youtubeUrls.some((url, i) => url !== prevYoutube[i]);
+    const articlesChanged = articleUrls.length !== prevArticles.length || 
+      articleUrls.some((url, i) => url !== prevArticles[i]);
+    
+    if ((youtubeChanged || articlesChanged) && !hasNotifiedRef.current) {
+      previousRefsRef.current = { youtube: youtubeUrls, articles: articleUrls };
+      hasNotifiedRef.current = true;
       onReferencesReady(youtubeUrls, articleUrls);
     }
-  }, [youtubeResources, articleResources, onReferencesReady]);
+  }, [youtubeResources, articleResources, isLoading, onReferencesReady]);
 
   // Mark resource as completed
   const markAsCompleted = (resourceId: string) => {
@@ -240,7 +268,7 @@ const ResourceRecommender = ({ summary, materialName, onReferencesReady }: Resou
     setCompletedResources(updated);
 
     // Save to localStorage
-    const progress: LearningProgress = {
+    const newProgress: LearningProgress = {
       userId: user.uid,
       topic: materialName,
       completedResources: updated,
@@ -249,25 +277,39 @@ const ResourceRecommender = ({ summary, materialName, onReferencesReady }: Resou
 
     const savedData = localStorage.getItem(`learning-progress-${user.uid}`);
     const data = savedData ? JSON.parse(savedData) : {};
-    data[materialName] = progress;
+    data[materialName] = newProgress;
     localStorage.setItem(`learning-progress-${user.uid}`, JSON.stringify(data));
-    setProgress(progress);
+    setProgress(newProgress);
   };
 
   // Refresh resources
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(async () => {
     setIsLoading(true);
+    hasNotifiedRef.current = false; // Allow new notification after refresh
+    
     const keywords = extractTopicKeywords(summary);
-    fetchYouTubeResources(keywords);
-    fetchArticleResources(keywords);
-  };
+    
+    try {
+      const [ytResources, artResources] = await Promise.all([
+        fetchYouTubeResources(keywords),
+        fetchArticleResources(keywords),
+      ]);
+      
+      setYoutubeResources(ytResources);
+      setArticleResources(artResources);
+    } catch (error) {
+      console.error('Error refreshing resources:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [summary, extractTopicKeywords, fetchYouTubeResources, fetchArticleResources]);
 
   const isResourceCompleted = (resourceId: string) => completedResources.includes(resourceId);
 
   const getRecommendationCount = () => {
     const totalResources = youtubeResources.length + articleResources.length;
     const completedCount = completedResources.length;
-    return { totalResources, completedCount, progressPercentage: (completedCount / totalResources) * 100 };
+    return { totalResources, completedCount, progressPercentage: totalResources > 0 ? (completedCount / totalResources) * 100 : 0 };
   };
 
   const stats = getRecommendationCount();

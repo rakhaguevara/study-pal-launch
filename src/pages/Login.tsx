@@ -90,52 +90,53 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-20">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8 sm:py-12 lg:py-20">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="w-full max-w-md"
+        className="w-full max-w-sm sm:max-w-md"
       >
         {/* Back Button */}
         <Button
           variant="ghost"
           onClick={() => navigate("/")}
-          className="mb-6"
+          className="mb-4 sm:mb-6 text-xs sm:text-sm"
+          size="sm"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
           Back to Home
         </Button>
 
         {/* Login Card */}
-        <div className="bg-white rounded-2xl p-8 shadow-xl">
-          <h2 className="text-3xl font-bold text-foreground mb-2 text-center">
+        <div className="bg-white rounded-xl sm:rounded-2xl p-5 sm:p-6 lg:p-8 shadow-xl">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1.5 sm:mb-2 text-center">
             {isSignUp ? "Join StudyPal" : "Welcome back to StudyPal!"}
           </h2>
-          <p className="text-muted-foreground text-center mb-8">
+          <p className="text-xs sm:text-sm text-muted-foreground text-center mb-5 sm:mb-6 lg:mb-8">
             {isSignUp ? "Create your account to get started" : "Sign in to continue your learning journey"}
           </p>
 
           <Button
             onClick={handleGoogleAuth}
-            className="w-full mb-6 bg-white hover:bg-muted border-2 border-border text-foreground py-6 rounded-full font-semibold shadow-sm transition-all"
+            className="w-full mb-4 sm:mb-6 bg-white hover:bg-muted border-2 border-border text-foreground py-4 sm:py-5 lg:py-6 rounded-full font-semibold shadow-sm transition-all text-xs sm:text-sm"
           >
-            <Mail className="mr-2 h-5 w-5" />
+            <Mail className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
             Continue with Google
           </Button>
 
-          <div className="relative mb-6">
+          <div className="relative mb-4 sm:mb-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border"></div>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-muted-foreground">Or continue with email</span>
+            <div className="relative flex justify-center text-xs sm:text-sm">
+              <span className="px-3 sm:px-4 bg-white text-muted-foreground">Or continue with email</span>
             </div>
           </div>
 
-          <form onSubmit={handleEmailAuth} className="space-y-4">
+          <form onSubmit={handleEmailAuth} className="space-y-3 sm:space-y-4">
             <div>
-              <Label htmlFor="email" className="text-foreground mb-2 block">
+              <Label htmlFor="email" className="text-foreground mb-1.5 sm:mb-2 block text-xs sm:text-sm">
                 Email
               </Label>
               <Input
@@ -145,12 +146,12 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 required
-                className="py-6 rounded-full"
+                className="py-4 sm:py-5 lg:py-6 rounded-full text-sm"
               />
             </div>
 
             <div>
-              <Label htmlFor="password" className="text-foreground mb-2 block">
+              <Label htmlFor="password" className="text-foreground mb-1.5 sm:mb-2 block text-xs sm:text-sm">
                 Password
               </Label>
               <Input
@@ -160,14 +161,14 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="py-6 rounded-full"
+                className="py-4 sm:py-5 lg:py-6 rounded-full text-sm"
               />
             </div>
 
             <Button
               type="submit"
               disabled={loading}
-              className="w-full btn-gradient py-6 rounded-full font-semibold"
+              className="w-full btn-gradient py-4 sm:py-5 lg:py-6 rounded-full font-semibold text-sm"
             >
               {loading ? "Please wait..." : isSignUp ? "Sign Up" : "Sign In"}
             </Button>
@@ -175,7 +176,7 @@ const Login = () => {
 
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full mt-4 text-muted-foreground hover:text-primary text-sm transition-colors"
+            className="w-full mt-3 sm:mt-4 text-muted-foreground hover:text-primary text-xs sm:text-sm transition-colors"
           >
             {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
           </button>

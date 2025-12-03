@@ -21,11 +21,16 @@ const DashboardCards = () => {
       const currentUser = auth.currentUser;
       if (!currentUser) return;
 
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('learning_style, quiz_completed')
         .eq('firebase_uid', currentUser.uid)
-        .single();
+        .maybeSingle();
+
+      if (error) {
+        console.warn('[DashboardCards] user_profiles query error:', error);
+        return;
+      }
 
       if (profile) {
         const learningStyleDisplay = profile.learning_style === 'undetermined' 
@@ -92,24 +97,25 @@ const DashboardCards = () => {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    // Responsive grid: 1 col mobile, 2 col tablet, 4 col desktop
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
       {summaryData.map((item, index) => (
         <motion.div
           key={item.label}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
-          className="bg-white rounded-xl p-6 shadow-sm border border-border hover:shadow-md transition-shadow"
+          className="bg-white rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm border border-border hover:shadow-md transition-shadow"
         >
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <div
-              className={`p-3 rounded-lg bg-gradient-to-br ${item.color} text-white`}
+              className={`p-2.5 sm:p-3 rounded-lg bg-gradient-to-br ${item.color} text-white flex-shrink-0`}
             >
-              <item.icon className="h-6 w-6" />
+              <item.icon className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{item.label}</p>
-              <p className="text-2xl font-bold text-foreground">{item.value}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs sm:text-sm text-muted-foreground">{item.label}</p>
+              <p className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground truncate">{item.value}</p>
             </div>
           </div>
         </motion.div>

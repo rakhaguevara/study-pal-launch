@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface Message {
   role: "user" | "assistant";
@@ -81,37 +82,38 @@ const AIAssistant = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col p-8">
-      {/* Header */}
+    // Full height minus navbar - AppShell handles outer padding
+    <div className="h-[calc(100vh-7rem)] sm:h-[calc(100vh-8rem)] lg:h-[calc(100vh-9rem)] flex flex-col">
+      {/* Header - responsive text sizes */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-6"
+        className="mb-4 sm:mb-6"
       >
-        <h1 className="text-4xl font-bold text-foreground mb-2">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-1 sm:mb-2">
           StudyPal AI Assistant
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm sm:text-base text-muted-foreground">
           Your personal learning companion 🤖
         </p>
       </motion.div>
 
       {/* Chat Container */}
-      <div className="flex-1 flex flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 flex flex-col bg-card border border-border rounded-xl sm:rounded-2xl overflow-hidden shadow-lg min-h-0">
+        {/* Messages Area - responsive padding */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
           {messages.length === 0 && (
-            <div className="space-y-4">
-              <p className="text-muted-foreground text-center">
+            <div className="space-y-3 sm:space-y-4">
+              <p className="text-sm sm:text-base text-muted-foreground text-center">
                 👋 Hi! I'm your StudyPal Assistant. How can I help you today?
               </p>
-              <div className="grid gap-3 max-w-md mx-auto">
+              <div className="grid gap-2 sm:gap-3 max-w-md mx-auto">
                 {QUICK_SUGGESTIONS.map((suggestion, index) => (
                   <Button
                     key={index}
                     onClick={() => handleSuggestionClick(suggestion)}
                     variant="outline"
-                    className="w-full text-left justify-start hover:bg-accent transition-all duration-200"
+                    className="w-full text-left justify-start hover:bg-accent transition-all duration-200 text-xs sm:text-sm h-auto py-2.5 sm:py-3 px-3 sm:px-4"
                     disabled={isLoading}
                   >
                     {suggestion}
@@ -130,35 +132,37 @@ const AIAssistant = () => {
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[70%] p-4 rounded-2xl ${
+                className={cn(
+                  // Responsive max-width and padding
+                  "max-w-[85%] sm:max-w-[75%] lg:max-w-[70%] p-3 sm:p-4 rounded-xl sm:rounded-2xl",
                   message.role === "user"
                     ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
                     : "bg-muted text-foreground"
-                }`}
+                )}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <p className="text-xs sm:text-sm whitespace-pre-wrap">{message.content}</p>
               </div>
             </motion.div>
           ))}
 
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-muted p-4 rounded-2xl">
+              <div className="bg-muted p-3 sm:p-4 rounded-xl sm:rounded-2xl">
                 <div className="flex gap-1">
                   <motion.div
-                    animate={{ y: [0, -8, 0] }}
+                    animate={{ y: [0, -6, 0] }}
                     transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                    className="w-2 h-2 bg-foreground/50 rounded-full"
+                    className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-foreground/50 rounded-full"
                   />
                   <motion.div
-                    animate={{ y: [0, -8, 0] }}
+                    animate={{ y: [0, -6, 0] }}
                     transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                    className="w-2 h-2 bg-foreground/50 rounded-full"
+                    className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-foreground/50 rounded-full"
                   />
                   <motion.div
-                    animate={{ y: [0, -8, 0] }}
+                    animate={{ y: [0, -6, 0] }}
                     transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                    className="w-2 h-2 bg-foreground/50 rounded-full"
+                    className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-foreground/50 rounded-full"
                   />
                 </div>
               </div>
@@ -168,32 +172,32 @@ const AIAssistant = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="p-6 border-t border-border bg-card">
+        {/* Input Area - sticky at bottom, responsive */}
+        <div className="p-3 sm:p-4 lg:p-6 border-t border-border bg-card flex-shrink-0">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               sendMessage(input);
             }}
-            className="flex gap-3"
+            className="flex gap-2 sm:gap-3"
           >
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask StudyPal anything…"
               disabled={isLoading}
-              className="flex-1 rounded-full h-12 px-6 text-base"
+              className="flex-1 rounded-full h-10 sm:h-12 px-4 sm:px-6 text-sm sm:text-base"
             />
             <Button
               type="submit"
               size="icon"
               disabled={isLoading || !input.trim()}
-              className="rounded-full h-12 w-12 bg-gradient-to-r from-orange-500 to-blue-500 hover:from-orange-600 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300"
+              className="rounded-full h-10 w-10 sm:h-12 sm:w-12 bg-gradient-to-r from-orange-500 to-blue-500 hover:from-orange-600 hover:to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300 flex-shrink-0"
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
               ) : (
-                <Send className="w-5 h-5" />
+                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
             </Button>
           </form>

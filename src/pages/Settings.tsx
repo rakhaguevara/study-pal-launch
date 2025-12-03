@@ -72,10 +72,23 @@ const Settings = () => {
         .from("user_profiles")
         .select("*")
         .eq("firebase_uid", user.uid)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
-      setProfile(data);
+      if (error) {
+        console.error("Error fetching profile:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (data) {
+        setProfile(data);
+      } else {
+        console.warn("No user profile found for:", user.uid);
+      }
     } catch (error) {
       console.error("Error fetching profile:", error);
       toast({
@@ -435,8 +448,7 @@ const Settings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+    <div className="space-y-4 sm:space-y-6">
         {/* Account Information */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
@@ -444,17 +456,17 @@ const Settings = () => {
           transition={{ delay: 0.1 }}
         >
           <Card className="border-border shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">Account Information</CardTitle>
-              <CardDescription>Manage your personal details and preferences</CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold">Account Information</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Manage your personal details and preferences</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0 sm:pt-0">
               {/* Profile Picture Upload Section */}
-              <div className="flex flex-col items-center gap-4 pb-4 border-b">
+              <div className="flex flex-col items-center gap-3 sm:gap-4 pb-4 border-b">
                 <div className="relative">
-                  <Avatar className="w-24 h-24 border-4 border-border">
+                  <Avatar className="w-18 h-18 sm:w-20 sm:h-20 lg:w-24 lg:h-24 border-4 border-border">
                     <AvatarImage src={profile.avatar_url || user?.photoURL || undefined} />
-                    <AvatarFallback className="bg-gradient-to-r from-orange-400 to-blue-500 text-white text-2xl">
+                    <AvatarFallback className="bg-gradient-to-r from-orange-400 to-blue-500 text-white text-lg sm:text-xl lg:text-2xl">
                       {profile.name.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -468,23 +480,23 @@ const Settings = () => {
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploadingAvatar}
-                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary hover:bg-primary/90 flex items-center justify-center text-white shadow-lg transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary hover:bg-primary/90 flex items-center justify-center text-white shadow-lg transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Upload new profile picture"
                   >
                     {isUploadingAvatar ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
                     ) : (
-                      <Camera className="h-4 w-4" />
+                      <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     )}
                   </button>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-foreground">{profile.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{profile.email}</p>
+                  <p className="text-sm sm:text-base font-medium text-foreground">{profile.name}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate max-w-[200px] sm:max-w-none">{profile.email}</p>
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
                 {renderEditableField("Full Name", "name", profile.name)}
                 {renderEditableField("Email", "email", profile.email)}
                 {renderEditableField("Date of Birth", "date_of_birth", profile.date_of_birth, "date")}
@@ -516,11 +528,11 @@ const Settings = () => {
             transition={{ delay: 0.2 }}
           >
             <Card className="border-border shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold">Security Settings</CardTitle>
-                <CardDescription>Change your password to keep your account secure</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold">Security Settings</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Change your password to keep your account secure</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
                 <div className="space-y-2">
                   <Label>Current Password</Label>
                   <div className="relative">
@@ -604,12 +616,12 @@ const Settings = () => {
             transition={{ delay: 0.2 }}
           >
             <Card className="border-border shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold">Security Settings</CardTitle>
-                <CardDescription>Your account security is managed by Google</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold">Security Settings</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Your account security is managed by Google</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
+              <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Your account uses Google Sign-In. Password cannot be changed here. Please manage your password through your Google account settings.
                 </p>
               </CardContent>
@@ -624,29 +636,29 @@ const Settings = () => {
           transition={{ delay: 0.3 }}
         >
           <Card className="border-border shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">Learning Data Overview</CardTitle>
-              <CardDescription>Your learning progress and style</CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold">Learning Data Overview</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Your learning progress and style</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Learning Style</Label>
-                  <div className="p-3 rounded-md bg-gradient-to-r from-primary/10 to-secondary/10 text-sm font-semibold capitalize">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="text-xs sm:text-sm font-medium">Learning Style</Label>
+                  <div className="p-2.5 sm:p-3 rounded-md bg-gradient-to-r from-primary/10 to-secondary/10 text-xs sm:text-sm font-semibold capitalize">
                     {profile.learning_style || "Not determined"}
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Quiz Status</Label>
-                  <div className="p-3 rounded-md bg-muted/50 text-sm">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="text-xs sm:text-sm font-medium">Quiz Status</Label>
+                  <div className="p-2.5 sm:p-3 rounded-md bg-muted/50 text-xs sm:text-sm">
                     {profile.quiz_completed ? "✅ Completed" : "⏳ Not completed"}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Account Created</Label>
-                  <div className="p-3 rounded-md bg-muted/50 text-sm">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="text-xs sm:text-sm font-medium">Account Created</Label>
+                  <div className="p-2.5 sm:p-3 rounded-md bg-muted/50 text-xs sm:text-sm">
                     {user?.metadata.creationTime ? format(new Date(user.metadata.creationTime), "PP") : "Unknown"}
                   </div>
                 </div>
@@ -655,9 +667,9 @@ const Settings = () => {
               <Button
                 onClick={() => navigate("/quiz")}
                 variant="outline"
-                className="w-full gap-2 hover:bg-primary/10"
+                className="w-full gap-2 hover:bg-primary/10 text-xs sm:text-sm h-9 sm:h-10"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 {profile.quiz_completed ? "Retake Learning Style Quiz" : "Take Learning Style Quiz"}
               </Button>
             </CardContent>
@@ -666,7 +678,6 @@ const Settings = () => {
 
         {/* Productivity Tracker */}
         {profile.id && <ProductivityHeatmap userId={profile.id} />}
-      </div>
     </div>
   );
 };

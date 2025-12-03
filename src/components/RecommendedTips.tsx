@@ -148,11 +148,16 @@ const RecommendedTips = () => {
         return;
       }
 
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('learning_style, quiz_completed')
         .eq('firebase_uid', currentUser.uid)
-        .single();
+        .maybeSingle();
+
+      if (error) {
+        console.warn('[RecommendedTips] user_profiles query error:', error);
+        return;
+      }
 
       if (profile && profile.quiz_completed && profile.learning_style !== 'undetermined') {
         const styleTips = learningStyleTips[profile.learning_style as keyof typeof learningStyleTips];
@@ -169,16 +174,16 @@ const RecommendedTips = () => {
 
   if (loading) {
     return (
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold text-foreground mb-6">
+      <div className="mt-6 sm:mt-8 lg:mt-12">
+        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground mb-4 sm:mb-6">
           Loading Recommendations...
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-xl p-6 shadow-sm border border-border animate-pulse">
-              <div className="flex gap-4">
-                <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-                <div className="flex-1">
+            <div key={i} className="bg-white rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm border border-border animate-pulse">
+              <div className="flex gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 rounded-lg flex-shrink-0"></div>
+                <div className="flex-1 min-w-0">
                   <div className="h-4 bg-gray-200 rounded mb-2"></div>
                   <div className="h-3 bg-gray-100 rounded"></div>
                 </div>
@@ -191,30 +196,30 @@ const RecommendedTips = () => {
   }
 
   return (
-    <div className="mt-12">
-      <h2 className="text-2xl font-bold text-foreground mb-6">
+    <div className="mt-6 sm:mt-8 lg:mt-12">
+      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground mb-4 sm:mb-6">
         Recommended Tips for You
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
         {tips.map((tip, index) => (
           <motion.div
             key={tip.title}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 + index * 0.1 }}
-            className="bg-white rounded-xl p-6 shadow-sm border border-border hover:shadow-md transition-shadow card-hover"
+            className="bg-white rounded-xl p-4 sm:p-5 lg:p-6 shadow-sm border border-border hover:shadow-md transition-shadow card-hover"
           >
-            <div className="flex gap-4">
+            <div className="flex gap-3 sm:gap-4">
               <div
-                className={`flex-shrink-0 p-3 rounded-lg bg-gradient-to-br ${tip.color} text-white`}
+                className={`flex-shrink-0 p-2.5 sm:p-3 rounded-lg bg-gradient-to-br ${tip.color} text-white`}
               >
-                <tip.icon className="h-6 w-6" />
+                <tip.icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <div>
-                <h3 className="font-semibold text-foreground mb-2">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-foreground mb-1 sm:mb-2 text-sm sm:text-base">
                   {tip.title}
                 </h3>
-                <p className="text-sm text-muted-foreground">{tip.description}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{tip.description}</p>
               </div>
             </div>
           </motion.div>
