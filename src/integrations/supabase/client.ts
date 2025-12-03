@@ -1,18 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Use provided URL or fallback to the project URL
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://tugqiaqepvaqnnrairax.supabase.co';
+// Get Supabase configuration from environment variables
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_ANON_KEY) {
-  console.warn('⚠️ VITE_SUPABASE_ANON_KEY is not set. Please add it to your .env file.');
+// Validate required environment variables
+if (!SUPABASE_URL) {
+  throw new Error(
+    '⚠️ VITE_SUPABASE_URL is not set. Please add it to your .env file.\n' +
+    'Example: VITE_SUPABASE_URL=https://your-project.supabase.co'
+  );
 }
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+if (!SUPABASE_ANON_KEY) {
+  throw new Error(
+    '⚠️ VITE_SUPABASE_ANON_KEY is not set. Please add it to your .env file.\n' +
+    'Example: VITE_SUPABASE_ANON_KEY=your-anon-key-here'
+  );
+}
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY || '', {
+// Create Supabase client
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
